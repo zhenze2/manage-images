@@ -1,5 +1,7 @@
 from func import *
 
+
+# PyQt5
 # 打包命令
 '''
 pyinstaller --onefile --noconsole index_search\\Index_search.py
