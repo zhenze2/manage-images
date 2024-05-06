@@ -5,7 +5,7 @@ from func import *
 pyinstaller --onefile --noconsole index_search\\Index_search.py
 '''
 '''
-Nuitka
+Nuitka 打包
 '''
 class MainWindow(QMainWindow):
     def __init__(self):
