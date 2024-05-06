@@ -6,6 +6,7 @@ from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
 
 
+# 基于tkinter
 # 打包命令
 '''
 pyinstaller --onefile --noconsole index_search\\Index_search.py
