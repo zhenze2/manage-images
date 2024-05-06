@@ -1,0 +1,19 @@
+# 这是一个配置文件，用于存储程序的设置
+# 请不要修改本文件，除非你知道你在做什么！
+{
+    "window_size": [
+        800,
+        600
+    ],
+    "image_formats": [
+        ".png",
+        ".jpg",
+        ".svg",
+        ".jpeg",
+        ".bmp",
+        ".gif",
+        ".tiff"
+    ],
+    "default_path": "images",
+    "deault_visual_path": "visual_images"
+}
