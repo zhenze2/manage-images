@@ -309,6 +309,7 @@ class ShowImage(QMainWindow):
         self.setGeometry(100, 100, 800, 600)
         self.setMinimumSize(800, 600)
 
+        self.re_current_local=False
         self.image_type = None
 
         self.graphics_view = QGraphicsView()
@@ -322,12 +323,14 @@ class ShowImage(QMainWindow):
         button_layout = QHBoxLayout()
         self.prev_button = QPushButton("上一张")
         self.play_button = QPushButton("自动播放")
+        self.local_button = QCheckBox("局部播放")
         self.next_button = QPushButton("下一张")
         self.prev_button.setFixedHeight(25)
         self.play_button.setFixedHeight(25)
         self.next_button.setFixedHeight(25)
         button_layout.addWidget(self.prev_button)
         button_layout.addWidget(self.play_button)
+        button_layout.addWidget(self.local_button)
         button_layout.addWidget(self.next_button)
         
         # 将按钮放置在布局底部
@@ -344,6 +347,7 @@ class ShowImage(QMainWindow):
         self.prev_button.clicked.connect(self.play_last_image)
         self.next_button.clicked.connect(self.play_next_image)
         self.play_button.clicked.connect(self.auto_play)
+        self.local_button.clicked.connect(self.play_local)
         self.windows.append(self)
 
     def show_image(self, image_path):
@@ -438,11 +442,18 @@ class ShowImage(QMainWindow):
         else:
             return None
 
+    def play_local(self,state):
+        # print(state)
+        if state:
+            self.re_current_local=True
+        else:
+            self.re_current_local=False
+
     def play_next_image(self):
         # 播放下一张图片逻辑
         next_node = self.next(self.current_Node)
-        while next_node and next_node.data(0, Qt.UserRole)[0]!="photo":
-            if next_node.data(0, Qt.UserRole)[0] == "file":
+        while next_node and next_node.data(0, Qt.UserRole)[0]!="photo":# 图片文件
+            if next_node.data(0, Qt.UserRole)[0] == "file":# 最底层的文件，名称有关文件地址
                 next_node = next_node.parent()
             elif next_node.data(0, Qt.UserRole)[0] == "category":
                 # next_node=self.select_from_category(next_node)
@@ -466,6 +477,14 @@ class ShowImage(QMainWindow):
                         next_node = self.get_child(next_node,0)
                     break
                 parent_node = parent_node.parent()
+        def local_play():
+            parent=self.current_Node.parent()
+            count=parent.childCount()
+            for i in range(count):
+                if parent.child(i)==self.current_Node:
+                    return parent.child((i+1)%count)
+        if self.re_current_local:
+            next_node=local_play()
         if next_node:
             # print(next_node.data(0, Qt.UserRole))
             file_path = next_node.data(0, Qt.UserRole)[1]
@@ -502,12 +521,21 @@ class ShowImage(QMainWindow):
                         prev_node = self.get_child(prev_node,prev_node.childCount()-1)
                     break
                 parent_node = parent_node.parent()
+        def local_play():
+            parent=self.current_Node.parent()
+            count=parent.childCount()
+            for i in range(count):
+                if parent.child(i)==self.current_Node:
+                    return parent.child((i-1)%count)
+        if self.re_current_local:
+            prev_node=local_play()
         if prev_node:
             # print(prev_node.data(0, Qt.UserRole))
             file_path = prev_node.data(0, Qt.UserRole)[1]
             self.current_Node=prev_node
             self.show_image(file_path)
             # print(file_path)
+
     def auto_play(self):
         # 自动播放图片
         if self.playing:
