@@ -1,1 +1,2 @@
 assets/ images/ images00/ vol.py vol_all.py thickness.py report.md report.pdf
+__pycache__/
