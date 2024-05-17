@@ -327,10 +327,12 @@ class ShowImage(QMainWindow):
         self.next_button = QPushButton("下一张")
         self.prev_button.setFixedHeight(25)
         self.play_button.setFixedHeight(25)
+        self.local_button.setFixedHeight(25)
+        self.local_button.setChecked(False)        
         self.next_button.setFixedHeight(25)
         button_layout.addWidget(self.prev_button)
         button_layout.addWidget(self.play_button)
-        button_layout.addWidget(self.local_button)
+        button_layout.addWidget(self.local_button, alignment=Qt.AlignCenter)  # 设置复选框居中
         button_layout.addWidget(self.next_button)
         
         # 将按钮放置在布局底部
