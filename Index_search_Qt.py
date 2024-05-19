@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt
 import sys
 import os
 
-from func import *
+from utils.func import *
 from conf.config import ConfigManager
 from utils.data_visual import DrawWindow
 from utils.ImageViewer import ShowImage,MultiImageDisplay
