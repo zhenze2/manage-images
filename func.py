@@ -2,8 +2,8 @@ import json
 from math import ceil
 import pickle
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTreeView, QFileSystemModel, QVBoxLayout, QWidget, QPushButton, QFileDialog, QMessageBox, QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,QListWidget,   QHBoxLayout, QGridLayout, QSplitter, QSizePolicy,QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QComboBox,QCheckBox,QScrollArea,QLayout
-from PyQt5.QtCore import Qt, QTimer, QEvent,QRect, QRectF, QSize
-from PyQt5.QtGui import QPixmap,QImage,QPainter
+from PyQt5.QtCore import Qt, QTimer, QEvent,QRect, QRectF, QSize,QPointF
+from PyQt5.QtGui import QPixmap,QImage,QPainter,QCursor
 from PyQt5.QtSvg import QSvgWidget,QSvgRenderer, QGraphicsSvgItem
 
 import sys
@@ -366,12 +366,15 @@ class ShowImage(QMainWindow):
         self.setGeometry(100, 100, 800, 600)
         self.setMinimumSize(800, 600)
 
+        self.zoom_factor = 1.1
+        
         self.re_current_local=False
         self.image_type = None
 
         self.graphics_view = QGraphicsView()
         self.graphics_scene = QGraphicsScene()
-
+        self.graphics_view.viewport().installEventFilter(self)
+        
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.graphics_view)
         main_layout.setAlignment(Qt.AlignCenter)
@@ -610,6 +613,35 @@ class ShowImage(QMainWindow):
             self.time = float(self.time_entry.text())
             self.timer_id = self.startTimer(int(self.time * 1000))  # 启动定时器
 
+    def eventFilter(self, obj, event):
+        if obj == self.graphics_view.viewport() and event.type() == QEvent.Wheel:
+            # 获取鼠标在视图中的位置
+            mouse_pos_view = event.pos()
+            mouse_pos_scene = self.graphics_view.mapToScene(mouse_pos_view)
+            delta = event.angleDelta().y()
+            if delta > 0:
+                scale_factor = self.zoom_factor
+            else:
+                scale_factor = 1 / self.zoom_factor
+            # 设置放大缩小的锚点为鼠标位置
+            self.graphics_view.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+            self.graphics_view.scale(scale_factor, scale_factor)
+            self.graphics_view.setTransformationAnchor(QGraphicsView.NoAnchor)
+            return True
+        elif event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+            # 处理鼠标左键按下事件进行拖动
+            self.last_mouse_pos = event.pos()
+            return True
+        elif event.type() == QEvent.MouseMove and event.buttons() & Qt.LeftButton:
+            # 处理鼠标拖动事件
+            delta = event.pos() - self.last_mouse_pos
+            self.last_mouse_pos = event.pos()
+            self.graphics_view.horizontalScrollBar().setValue(
+                self.graphics_view.horizontalScrollBar().value() - delta.x())
+            self.graphics_view.verticalScrollBar().setValue(
+                self.graphics_view.verticalScrollBar().value() - delta.y())
+            return True
+        return super().eventFilter(obj, event)
     def timerEvent(self, event):
         # 自动播放下一张图片
         self.play_next_image()
@@ -643,6 +675,7 @@ class MultiImageDisplay(ShowImage):
         super().__init__(None,None)
         self.setWindowTitle("Multi Image Viewer")
         self.image_widget=QWidget()
+        self.zoom_factor = 1.1
         self.init_ui()
 
     def init_ui(self):
@@ -666,6 +699,8 @@ class MultiImageDisplay(ShowImage):
         central_widget = QWidget()
         central_widget.setLayout(self.main_layout)
         self.setCentralWidget(central_widget)
+        
+        self.graphics_view.viewport().installEventFilter(self)
 
     def add_image_widget(self):
         # 创建一个新的图片显示组件，并添加到窗口中
@@ -767,6 +802,37 @@ class MultiImageDisplay(ShowImage):
         self.graphics_scene.setSceneRect(QRectF(0,0,max_width,max_height))
         self.graphics_view.fitInView(self.graphics_scene.sceneRect(), Qt.KeepAspectRatio)
         self.graphics_view.show()
+
+    def eventFilter(self, obj, event):
+        if obj == self.graphics_view.viewport() and event.type() == QEvent.Wheel:
+            # 获取鼠标在视图中的位置
+            mouse_pos_view = event.pos()
+            mouse_pos_scene = self.graphics_view.mapToScene(mouse_pos_view)
+            delta = event.angleDelta().y()
+            if delta > 0:
+                scale_factor = self.zoom_factor
+            else:
+                scale_factor = 1 / self.zoom_factor
+            # 设置放大缩小的锚点为鼠标位置
+            self.graphics_view.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+            self.graphics_view.scale(scale_factor, scale_factor)
+            self.graphics_view.setTransformationAnchor(QGraphicsView.NoAnchor)
+            return True
+        elif event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+            # 处理鼠标左键按下事件进行拖动
+            self.last_mouse_pos = event.pos()
+            return True
+        elif event.type() == QEvent.MouseMove and event.buttons() & Qt.LeftButton:
+            # 处理鼠标拖动事件
+            delta = event.pos() - self.last_mouse_pos
+            self.last_mouse_pos = event.pos()
+            self.graphics_view.horizontalScrollBar().setValue(
+                self.graphics_view.horizontalScrollBar().value() - delta.x())
+            self.graphics_view.verticalScrollBar().setValue(
+                self.graphics_view.verticalScrollBar().value() - delta.y())
+            return True
+        return super().eventFilter(obj, event)
+
 
     def showEvent(self, event):
         super().showEvent(event)
