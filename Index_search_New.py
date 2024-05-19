@@ -374,12 +374,7 @@ class MainWindow(QMainWindow):
 
     def show_multi_images(self):
         # 显示多张图片
-        # image_paths=["D:\\source_python\\Index_search\\大豆-第八阶段.png", "D:\\source_python\\Index_search\\大豆-第八阶段.png", "D:\\source_python\\Index_search\\大豆-第八阶段.png","D:\\source_python\\Index_search\\大豆-第八阶段.png","D:\\source_python\\Index_search\\大豆-第八阶段.png","D:\\source_python\\Index_search\\大豆-第八阶段.png"]
         day_path=[]
-        # for combo in self.combos:
-        #     if combo.currentText() == "请选择":
-        #         break
-        #     day_path.append(combo.currentText())
         for id in range(len(self.combos)):
             # if type(id.property("property")[1])==list:
             if id+1<len(self.combos) and (self.combos[id+1].currentText() == "请选择" or DEFAULT_IMAGE_FORMAT in self.combos[id+1].currentText()):

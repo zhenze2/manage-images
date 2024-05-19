@@ -27,6 +27,7 @@ def chinese_to_arabic_sort(arr):
     "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
     "六": 6, "七": 7, "八": 8, "九": 9, "十": "","百": "","千": "","万": "","亿": ""}
     arrb=copy.deepcopy(arr)
+    sorted_b=arrb
     for l in range(len(arrb)):
         chinese_num = re.findall(r'[一二三四五六七八九十百千万亿]+', arrb[l])
         for i in chinese_num:
