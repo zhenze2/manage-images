@@ -99,6 +99,7 @@ class MainWindow(QMainWindow):
         self.time_entry = QLineEdit()
         self.time_entry.setText("0.1")  # 默认时间间隔为0.1秒
         
+        
         # 选中的类别
         global selected_category
         selected_category = QLabel("")
