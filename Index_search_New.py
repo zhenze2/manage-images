@@ -97,9 +97,13 @@ class MainWindow(QMainWindow):
         # 显示多张图片
         # self.multi_show_images=QLineEdit()
         self.button_multi_image = QPushButton("显示多张图片")
-        
-        
-        self.checkbox_layout=QHBoxLayout()
+
+        # 创建多图显示搜索栏标签和输入框
+        self.entry_muti_search = QLineEdit()
+        # self.button_muti_search = QPushButton("全局搜索")
+        self.last_input=""
+
+        self.checkbox_layout=QGridLayout()
         checkbox_widget=QWidget()
         checkbox_widget.setLayout(self.checkbox_layout)
 
@@ -132,9 +136,11 @@ class MainWindow(QMainWindow):
         # self.main_layout.addWidget(self.multi_show_images,7,1)
         self.main_layout.addWidget(self.button_multi_image,7,2,alignment=Qt.AlignCenter)
         # self.main_layout.addWidget(checkbox_widget,8,0,1,3)
+        self.main_layout.addWidget(self.entry_muti_search,7,1)
+        self.scroll_area.setFixedHeight(40)
         self.main_layout.addWidget(self.scroll_area,8,0,1,3)
 
-        self.init_combs()
+        # self.init_combs()
         
         # 创建主窗口部件并设置布局
         central_widget = QWidget()
@@ -160,18 +166,51 @@ class MainWindow(QMainWindow):
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # 如果没有加载到数据，则重新索引并保存到文件
         self.data = INDEX_IMAGE
-        self.clear_combos_layout()
-        self.create_combos(self.data, 0)
+        
+        # 把字符串写入新文件,用utf-8编码
+        # with open ("index_image.txt",'w',encoding='utf-8') as f:
+            # f.write(str(INDEX_IMAGE))
+        # self.clear_combos_layout()
+        # self.create_combos(self.data, 0)
         # self.update_combos(0, 0)
-        level=0
-        if level < len(self.combos):
-            mxa_len, v_len = 0, 0
-            comboBox = self.combos[level]
-            for y in range(0, comboBox.count()):
-                v_len=comboBox.fontMetrics().width(comboBox.itemText(y))
-                if (mxa_len <= v_len): 
-                    mxa_len = v_len
-            comboBox.view().setMinimumWidth(int(mxa_len+15))	# 设置自适应宽度
+        # level=0
+        # if level < len(self.combos):
+        #     mxa_len, v_len = 0, 0
+        #     comboBox = self.combos[level]
+        #     for y in range(0, comboBox.count()):
+        #         v_len=comboBox.fontMetrics().width(comboBox.itemText(y))
+        #         if (mxa_len <= v_len): 
+        #             mxa_len = v_len
+        #     comboBox.view().setMinimumWidth(int(mxa_len+15))	# 设置自适应宽度
+
+    def update_checkboxes(self,dicts):
+        self.hide_last_level_options()
+        level_wid=0
+        for ops in dicts:
+            if type(ops)==dict:
+                if len(ops.values())>1:
+                    i=0
+                    for key,op in ops.items():
+                        checkbox = QCheckBox(op)
+                        checkbox.setChecked(True)
+                        checkbox.setProperty("parent", key)
+                        self.checkbox_layout.addWidget(checkbox,i,level_wid)
+                        self.checkboxes.append(checkbox)
+                        i+=1
+                    level_wid+=1
+            else:
+                # if len(ops)>1:
+                i=0
+                for op in ops:
+                    checkbox = QCheckBox(op)
+                    checkbox.setChecked(True)
+                    checkbox.setProperty("parent", None)
+                    self.checkbox_layout.addWidget(checkbox,i,level_wid)
+                    self.checkboxes.append(checkbox)
+                    i+=1
+                level_wid+=1
+        rowcount=self.checkbox_layout.rowCount()
+        self.scroll_area.setFixedHeight(rowcount*(self.checkboxes[0].sizeHint().height()+10))
     def init_combs(self):
         self.combos = []
         INDEX_IMAGE_FILE = os.path.join(self.current_dir,"index_image.pkl")
@@ -308,6 +347,7 @@ class MainWindow(QMainWindow):
         for checkbox in self.checkboxes:
             checkbox.deleteLater()
         self.checkboxes.clear()
+        self.scroll_area.setFixedHeight(40)
     def browse_directory(self):
         browse_directory(self.entry_path,self.tree)
         INDEX_IMAGE_FILE = os.path.join(self.current_dir,"index_image.pkl")
@@ -374,16 +414,16 @@ class MainWindow(QMainWindow):
 
     def show_multi_images(self):
         # 显示多张图片
-        day_path=[]
-        for id in range(len(self.combos)):
-            # if type(id.property("property")[1])==list:
-            if id+1<len(self.combos) and (self.combos[id+1].currentText() == "请选择" or DEFAULT_IMAGE_FORMAT in self.combos[id+1].currentText()):
-                al=self.combos[id].property("property")[1]
-                if al:
-                    for i in range(len(self.checkboxes)):
-                        if self.checkboxes[i].isChecked():
-                            day_path.append(al[i])
-                break
+        # day_path=[]
+        # for id in range(len(self.combos)):
+        #     # if type(id.property("property")[1])==list:
+        #     if id+1<len(self.combos) and (self.combos[id+1].currentText() == "请选择" or DEFAULT_IMAGE_FORMAT in self.combos[id+1].currentText()):
+        #         al=self.combos[id].property("property")[1]
+        #         if al:
+        #             for i in range(len(self.checkboxes)):
+        #                 if self.checkboxes[i].isChecked():
+        #                     day_path.append(al[i])
+        #         break
         # print(day_path)
         # print(day_path)
         # for checkbox in self.checkboxes:
@@ -393,7 +433,25 @@ class MainWindow(QMainWindow):
         # target_day = self.multi_show_images.text()
         # image_paths = search_and_get_subnodes(self.tree, target_day)
         # print(image_paths)
-        image_paths = day_path
+        # dicts,paths = muti_search(self.entry_path,self.entry_muti_search,self.data)
+        # print(dicts,paths)
+        # self.update_checkboxes(dicts)
+        # print(image_paths)
+        # print(self.paths)
+        if self.entry_muti_search.text() == "":
+            self.hide_last_level_options()
+            return
+        dicts,self.paths = muti_search(self.entry_path,self.entry_muti_search,self.data,self.config_manager.get("MultiShow_elements"))
+        # print(dicts,paths)
+        if self.last_input != self.entry_muti_search.text():
+            self.update_checkboxes(dicts)
+        self.last_input=self.entry_muti_search.text()
+        image_paths=[]
+        for i in range(len(self.checkboxes)):
+            if self.checkboxes[i].isChecked() and self.paths[i] is not None:
+                # print(self.checkboxes[i].text())
+                # print(image_paths[i])
+                image_paths.append(self.paths[i])
         if image_paths:
             multi_image_display = MultiImageDisplay()
             multi_image_display.show_images(image_paths)

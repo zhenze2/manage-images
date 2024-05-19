@@ -15,5 +15,11 @@
         ".tiff"
     ],
     "default_path": "images",
-    "deault_visual_path": "visual_images"
+    "deault_visual_path": "visual_images",
+    "MultiShow_elements": [
+        "SIC",
+        "SIT",
+        "SIE",
+        "SIH"
+    ]
 }

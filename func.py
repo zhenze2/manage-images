@@ -145,8 +145,8 @@ def on_select(item,selected_category):
         parent_category = parent_item.text(0)
         selected_item = parent_category + SEPARATOR + selected_item
         parent_item = parent_item.parent()
-    if DEFAULT_IMAGE_FORMAT + "-" in selected_item:
-        selected_item = selected_item.split(DEFAULT_IMAGE_FORMAT + "-")[-1]
+    if DEFAULT_IMAGE_FORMAT + SEPARATOR in selected_item:
+        selected_item = selected_item.split(DEFAULT_IMAGE_FORMAT + SEPARATOR)[-1]
     selected_category.setText(selected_item)
 def search_in_tree(node, keywords):
     """
@@ -154,10 +154,10 @@ def search_in_tree(node, keywords):
     """
     result = None
     # 将节点文本信息按照分隔符 "-" 分割
-    current_node_text = (keywords.split("-"))[0]
+    current_node_text = (keywords.split(SEPARATOR))[0]
     # print(tree.item(node, "text"),current_node_text,keywords)
     # 把被分隔开的文本合并成一个字符串
-    next_keywords = "-".join(keywords.split("-")[1:])
+    next_keywords = SEPARATOR.join(keywords.split(SEPARATOR)[1:])
     if keywords == node.text(0):
         return node
     for child_index in range(node.childCount()):
@@ -195,15 +195,15 @@ def search(tree, entry_path, selected_category, entry_filename, show_image):
     
     # 在树中搜索文件节点
     result = []
-    first_name = full_name.split("-")[0]
+    first_name = full_name.split(SEPARATOR)[0]
     for node in range(tree.topLevelItemCount()):
         item = tree.topLevelItem(node)
         if first_name == item.text(0):
-            result.append(search_in_tree(item, "-".join(full_name.split("-")[1:])))
+            result.append(search_in_tree(item, SEPARATOR.join(full_name.split(SEPARATOR)[1:])))
             break
 
     # 如果找到了文件，显示搜索结果
-    if result[0]:
+    if len(result)>0:
         filepath = result[0].data(0, Qt.UserRole)[1]
         show_image(filepath,result[0])
 
@@ -269,18 +269,74 @@ def global_search(tree, entry_path, entry_global_search, show_image):
     
     # 在树中搜索文件节点
     result = []
-    first_name = full_name.split("-")[0]
+    first_name = full_name.split(SEPARATOR)[0]
     for node in range(tree.topLevelItemCount()):
         item = tree.topLevelItem(node)
         if first_name == item.text(0):
-            result.append(search_in_tree(item, "-".join(full_name.split("-")[1:])))
+            result.append(search_in_tree(item, SEPARATOR.join(full_name.split(SEPARATOR)[1:])))
             break
 
     # 如果找到了文件，显示搜索结果
-    if result[0]:
+    if len(result)>0:
         filepath = result[0].data(0, Qt.UserRole)[1]
         show_image(filepath,result[0])
 
+
+def muti_search(entry_path, entry_date_search,index_dict,elements):
+    # elements=["SIC","SIT","SIH","SIE"]
+    # 获取待索引目录路径
+    directory_to_index = entry_path.text()
+    
+    # 获取输入的文件名
+    search_filename = entry_date_search.text()
+
+    # 检查是否选择了目录
+    if not directory_to_index:
+        QMessageBox.critical(None, "错误", "请选择目录")
+        return
+
+    # 检查是否输入了查询日期
+    if not search_filename:
+        QMessageBox.critical(None, "错误", "查询日期格式错误")
+        return
+    
+    dicts=[]
+    for element in elements:
+        # 组合完整的文件名
+        al=[x for x in index_dict.keys() if element in x]
+        if len(al)==0:
+            for key, items in index_dict.items():
+                if type(items)==dict:
+                    a=[x for x in items.keys() if element in x]
+                    if len(a)>0:
+                        dicts.append({key:a})
+        else:
+            dicts.append(al)
+    result=[]
+    end_name = search_filename + DEFAULT_IMAGE_FORMAT
+    ids=end_name.split(SEPARATOR)
+    # print(dicts)
+    for start in dicts:
+        if isinstance(start,dict):
+            for key,value in start.items():
+                search_ids=[key,value]+ids
+                search_dict=index_dict
+                for id in search_ids:
+                    search_dict=search_dict.get(id)
+                    if search_dict==None:
+                        break
+                result.append(search_dict)
+        elif isinstance(start,list):
+            for head in start:
+                search_ids=[head]+ids
+                # print(search_ids)
+                search_dict=index_dict
+                for id in search_ids:
+                    search_dict=search_dict.get(id)
+                    if search_dict==None:
+                        break
+                result.append(search_dict)
+    return dicts,result
 def update_image_format(entry_image_format, tree,directory):
     """
     更新默认图像格式。
@@ -746,6 +802,7 @@ DEFAULT_CONFIG = {
     "image_formats": [".png",".jpg",".svg",".jpeg",".bmp",".gif",".tiff"],
     "default_path": "images",
     "deault_visual_path": "visual_images",
+    "MultiShow_elements":["SIC","SIT","SIE","SIH"],
 }
 
 class ConfigManager:
@@ -785,22 +842,6 @@ class ConfigManager:
 
 import numpy as np
 import pandas as pd
-# def draw_pic(file_path,save_path):
-#     # data = pd.DataFrame(np.random.randn(100, 1), columns=['TEST_DATA'])
-#     # data.to_csv(file_path, index=False)
-#     # raw_data = pd.read_csv(file_path,sheet_name=0)
-#     if file_path.endswith('.csv'):
-#         raw_data = pd.read_csv(file_path)
-#     elif file_path.endswith('.xlsx'):
-#         raw_data = pd.read_excel(file_path,sheet_name=0)
-#     title=list(raw_data.columns)
-#     plot_data = np.array(raw_data.values).reshape(-1)
-#     plt.plot(plot_data, linewidth=1.0)
-#     plt.xticks(range(0, plot_data.shape[0], 10), fontsize=12)
-#     plt.yticks(fontsize=12)
-#     plt.legend(title, fontsize=12)
-#     plt.show()
-#     return plt
 
 import pyqtgraph as pg
 # class DrawWindow(QMainWindow):
