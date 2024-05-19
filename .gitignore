@@ -3091,3 +3091,8 @@ images/密集度/SIH-2_2000_01_01.png
 images/密集度/SIT_2000_01_01.png
 tets.py
 index_image.txt
+__pycache__/config.cpython-38.pyc
+__pycache__/data_visual.cpython-38.pyc
+__pycache__/ImageViewer.cpython-38.pyc
+utils/__pycache__/data_visual.cpython-38.pyc
+utils/__pycache__/ImageViewer.cpython-38.pyc
