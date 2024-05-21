@@ -270,6 +270,9 @@ class ShowImage(QMainWindow):
             self.timer_id = self.startTimer(int(self.time * 1000))  # 启动定时器
 
     def eventFilter(self, obj, event):
+        '''
+        事件过滤器，处理鼠标滚轮事件和拖动事件，实现图片的放大缩小和拖动
+        '''
         if obj == self.graphics_view.viewport() and event.type() == QEvent.Wheel:
             # 获取鼠标在视图中的位置
             mouse_pos_view = event.pos()
@@ -405,7 +408,7 @@ class MultiImageDisplay(ShowImage):
         width = 0
         height = 0
         n=len(self.svgs)
-        num_images_per_row = self.optimal_images_per_row(n,self.geometry().width(),self.geometry().height())
+        num_images_per_row = self.optimal_images_per_row(n,QSvgRenderer(self.svgs[0]).viewBox().width(),QSvgRenderer(self.svgs[0]).viewBox().height(),self.geometry().width()/self.geometry().height())
         max_width = 0
         max_height = 0
         for i in range(n):
@@ -436,9 +439,8 @@ class MultiImageDisplay(ShowImage):
         self.graphics_scene.clear()
         width = 0
         height = 0
-
         n=len(self.pixmaps)
-        num_images_per_row = self.optimal_images_per_row(n,self.geometry().width(),self.geometry().height())
+        num_images_per_row = self.optimal_images_per_row(n,self.pixmaps[0].width(),self.pixmaps[0].height(),ratio=self.geometry().width()/self.geometry().height())
         max_width = 0
         max_height = 0
         for i in range(n):
@@ -460,6 +462,9 @@ class MultiImageDisplay(ShowImage):
         self.graphics_view.show()
 
     def eventFilter(self, obj, event):
+        '''
+        事件过滤器，处理鼠标滚轮事件和拖动事件，实现图片的放大缩小和拖动
+        '''
         if obj == self.graphics_view.viewport() and event.type() == QEvent.Wheel:
             # 获取鼠标在视图中的位置
             mouse_pos_view = event.pos()
@@ -505,7 +510,7 @@ class MultiImageDisplay(ShowImage):
             self.resize_svg()
     
     @staticmethod
-    def optimal_images_per_row(n,width=1000,height=1000):
+    def optimal_images_per_row(n,width=100,height=100,ratio=800/600):
         # Find the square root of the number of images to get an initial estimate
         sqrt_n = int(n ** 0.5)
         if sqrt_n == n**2:
@@ -513,7 +518,9 @@ class MultiImageDisplay(ShowImage):
         num1 = sqrt_n
         num2 = sqrt_n+1
         
-        if abs(num1*width-height*ceil(n/num1))<abs(num2*width-height*ceil(n/num2)):
+        num1_ratio = (num1*width)/(height*ceil(n/num1))
+        num2_ratio = (num2*width)/(height*ceil(n/num2))
+        if abs(num1_ratio-ratio) < abs(num2_ratio-ratio):
             return num1
         else:
             return num2
