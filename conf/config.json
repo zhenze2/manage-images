@@ -21,5 +21,12 @@
         "SIT",
         "SIE",
         "SIH"
-    ]
+    ],
+    "elements_translation": {
+        "SIC": "海冰密集度",
+        "SIT": "海冰厚度",
+        "SIH": "海冰高度",
+        "SIE": "海冰面积",
+        "SIV": "海冰体积"
+    }
 }

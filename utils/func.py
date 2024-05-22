@@ -12,6 +12,14 @@ SEPARATOR = "_"
 # 主文件所在目录
 CURRENT_DIR=None
 
+ELEMENTS_TRANSLATION = None
+
+NAME_SPACE=SEPARATOR+'空间分布图'
+NAME_TIME=SEPARATOR+'时间序列图'
+
+def update_elements_translation(dic):
+    global ELEMENTS_TRANSLATION
+    ELEMENTS_TRANSLATION = dic
 def update_dir(current_dir):
     global CURRENT_DIR
     CURRENT_DIR=current_dir
@@ -47,6 +55,8 @@ def chinese_to_arabic_sort(arr):
     return sorted_b
 def index_image_files(directory, image_format):
     index = {}  # 初始化索引字典
+    pattern = r'_\d{4}(?:_\d{2})?'+image_format+'$' #判断是否为年份或者月份结尾
+    # re.search(pattern, file)
     for root, dirs, files in os.walk(directory):
         files = chinese_to_arabic_sort(files)
         for file in files:
@@ -54,6 +64,13 @@ def index_image_files(directory, image_format):
                 if SEPARATOR not in file:
                     # QMessageBox.information(None, "错误",str(file)+ "不符合规范格式: 类别1"+SEPARATOR+"类别2"+SEPARATOR+"..."+SEPARATOR+"类别n"+SEPARATOR+"图片名称\n例如: cat"+SEPARATOR+"dog"+SEPARATOR+"1" + DEFAULT_IMAGE_FORMAT)
                     continue
+                # 增加时间空间标签
+                po=file.find(SEPARATOR)
+                if re.search(pattern, file):
+                    file=file[:po]+NAME_TIME+file[po:]
+                else:
+                    file=file[:po]+NAME_SPACE+file[po:]
+                
                 categories, filename = file.rsplit(SEPARATOR, maxsplit=1)
                 categories = categories.strip().split(SEPARATOR)
                 filename = filename.strip()
@@ -112,15 +129,30 @@ def update_treeview(tree, parent, categories):
         NodeType = "category"
         if DEFAULT_IMAGE_FORMAT in category:
             f_path = categories[category]
+            # 确保得到正确的文件路径
+            f_path = f_path.replace(NAME_SPACE,'')
+            f_path = f_path.replace(NAME_TIME,'')
             NodeType = "photo"
         item = QTreeWidgetItem(parent)
+        
+        # 修改中文名称显示
+        dic=ELEMENTS_TRANSLATION
         item.setText(0, category)
+        for k,v in dic.items():
+            if k in category:
+                # print(k,v)
+                item.setText(0, category.replace(k,v))
+                break
+
         item.setData(0,Qt.UserRole,[NodeType,f_path])
         if isinstance(subcategories, dict):
             update_treeview(tree, item, subcategories)
         else:
             if type(subcategories) is str:
                 f_path = subcategories
+                # 确保得到正确的文件路径
+                f_path = f_path.replace(NAME_SPACE,'')
+                f_path = f_path.replace(NAME_TIME,'')
                 NodeType = "file"
                 child_item = QTreeWidgetItem(item)
                 child_item.setText(0, subcategories)
@@ -146,8 +178,10 @@ def search_in_tree(node, keywords):
     在树形结构中搜索包含关键词的叶子节点
     """
     result = None
-    # 将节点文本信息按照分隔符 "-" 分割
+    # 将节点文本信息按照分隔符 SEPORATOR 分割
+
     current_node_text = (keywords.split(SEPARATOR))[0]
+        
     # print(tree.item(node, "text"),current_node_text,keywords)
     # 把被分隔开的文本合并成一个字符串
     next_keywords = SEPARATOR.join(keywords.split(SEPARATOR)[1:])
@@ -159,7 +193,7 @@ def search_in_tree(node, keywords):
             if DEFAULT_IMAGE_FORMAT in child.text(0):
                 return child
             return search_in_tree(child, next_keywords)
-    # return result
+    return result
 
 def search(tree, entry_path, selected_category, entry_filename, show_image):
     """
@@ -185,7 +219,8 @@ def search(tree, entry_path, selected_category, entry_filename, show_image):
 
     # 组合完整的文件名
     full_name = selected_category.text() + SEPARATOR + search_filename + DEFAULT_IMAGE_FORMAT
-    
+    for k,v in ELEMENTS_TRANSLATION.items():
+        full_name=full_name.replace(k,v)
     # 在树中搜索文件节点
     result = []
     first_name = full_name.split(SEPARATOR)[0]
@@ -197,8 +232,9 @@ def search(tree, entry_path, selected_category, entry_filename, show_image):
 
     # 如果找到了文件，显示搜索结果
     if len(result)>0:
-        filepath = result[0].data(0, Qt.UserRole)[1]
-        show_image(filepath,result[0])
+        if result[0]:
+            filepath = result[0].data(0, Qt.UserRole)[1]
+            show_image(filepath,result[0])
 
 def global_search(tree, entry_path, entry_global_search, show_image):
     """
@@ -222,7 +258,8 @@ def global_search(tree, entry_path, entry_global_search, show_image):
 
     # 组合完整的文件名
     full_name = search_filename + DEFAULT_IMAGE_FORMAT
-    
+    for k,v in ELEMENTS_TRANSLATION.items():
+        full_name=full_name.replace(k,v)
     # 在树中搜索文件节点
     result = []
     first_name = full_name.split(SEPARATOR)[0]
@@ -234,8 +271,9 @@ def global_search(tree, entry_path, entry_global_search, show_image):
 
     # 如果找到了文件，显示搜索结果
     if len(result)>0:
-        filepath = result[0].data(0, Qt.UserRole)[1]
-        show_image(filepath,result[0])
+        if result[0]:
+            filepath = result[0].data(0, Qt.UserRole)[1]
+            show_image(filepath,result[0])
 
 def muti_search(entry_path, entry_date_search,index_dict,elements):
     # elements=["SIC","SIT","SIH","SIE"]
@@ -271,26 +309,29 @@ def muti_search(entry_path, entry_date_search,index_dict,elements):
     end_name = search_filename + DEFAULT_IMAGE_FORMAT
     ids=end_name.split(SEPARATOR)
     # print(dicts)
+    # print(index_dict)
+    # 处理搜索路径，对添加的时间序列图和空间分布图处理
     for start in dicts:
         if isinstance(start,dict):
             for key,value in start.items():
-                search_ids=[key,value]+ids
+                search_ids=[key,value,NAME_SPACE.replace(SEPARATOR,"")]+ids
                 search_dict=index_dict
                 for id in search_ids:
                     search_dict=search_dict.get(id)
                     if search_dict==None:
                         break
-                result.append(search_dict)
+                result.append(search_dict.replace(NAME_SPACE,''))
         elif isinstance(start,list):
             for head in start:
-                search_ids=[head]+ids
+                search_ids=[head,NAME_SPACE.replace(SEPARATOR,"")]+ids
                 # print(search_ids)
                 search_dict=index_dict
                 for id in search_ids:
                     search_dict=search_dict.get(id)
                     if search_dict==None:
                         break
-                result.append(search_dict)
+                result.append(search_dict.replace(NAME_SPACE,''))
+    # print(dicts,result)
     return dicts,result
 def update_image_format(entry_image_format, tree,directory):
     """
@@ -302,5 +343,9 @@ def update_image_format(entry_image_format, tree,directory):
 
 def update_sep(sep,tree,entry_path):
         global SEPARATOR
+        global NAME_SPACE
+        global NAME_TIME
         SEPARATOR=sep.currentText()
+        NAME_SPACE=SEPARATOR+'空间分布图'
+        NAME_TIME=SEPARATOR+'时间序列图'
         browse_directory(entry_path,tree,entry_path.text())

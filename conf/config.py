@@ -8,12 +8,15 @@ DEFAULT_CONFIG = {
     "default_path": "images",
     "deault_visual_path": "visual_images",
     "MultiShow_elements":["SIC","SIT","SIE","SIH"],
+    "elements_translation": {"SIC":'海冰密集度',"SIT":'海冰厚度',"SIH":'海冰高度',"SIE":'海冰面积',"SIV":'海冰体积'},
 }
 
 class ConfigManager:
     def __init__(self, config_file):
         self.config_file = config_file
         self.config = self.load_config()
+        if not self.check():
+            self.config = DEFAULT_CONFIG
         self.save_config()
 
     def load_config(self):
@@ -34,6 +37,10 @@ class ConfigManager:
             f.write("# 请不要修改本文件，除非你知道你在做什么！\n")
             f.write(json.dumps(self.config, indent=4, ensure_ascii=False))
 
+    def check(self):
+        # 检查配置项是否存在
+        return DEFAULT_CONFIG.keys() == self.config.keys()
+    
     def get(self, key):
         # 获取配置项的值
         return self.config.get(key)
