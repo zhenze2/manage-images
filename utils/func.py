@@ -53,12 +53,13 @@ def chinese_to_arabic_sort(arr):
                     arrb[l] = arrb[l].replace(j, str(chinese_numbers[j]))
         sorted_b = [x for _, x in sorted(zip(arrb, arr), key=lambda x:int(re.findall(r'\d+',x[0])[0]) if len(re.findall(r'\d+',x[0]))>0  else 999999999999)]
     return sorted_b
-def index_image_files(directory, image_format):
+def index_image_files(directory, image_format):  # 修改中文名称
     index = {}  # 初始化索引字典
     pattern = r'_\d{4}(?:_\d{2})?'+image_format+'$' #判断是否为年份或者月份结尾
     # re.search(pattern, file)
+    # 索引了所在目录内包括子目录所有符合条件的文件
     for root, dirs, files in os.walk(directory):
-        files = chinese_to_arabic_sort(files)
+        files = sorted(files)
         for file in files:
             if file.endswith(image_format):
                 if SEPARATOR not in file:
@@ -118,7 +119,7 @@ def browse_directory(entry_path,tree,image_path=None):
             entry_path.setText(directory_path)
             update_category_tree(tree,directory_path)
 
-def update_treeview(tree, parent, categories):
+def update_treeview(tree, parent, categories): # 修改中文名称
     """
     递归地使用类别更新树视图。
     """
@@ -195,7 +196,7 @@ def search_in_tree(node, keywords):
             return search_in_tree(child, next_keywords)
     return result
 
-def search(tree, entry_path, selected_category, entry_filename, show_image):
+def search(tree, entry_path, selected_category, entry_filename, show_image):  # 修改中文名称
     """
     根据给定的类别和文件名执行搜索。
     """
@@ -236,7 +237,7 @@ def search(tree, entry_path, selected_category, entry_filename, show_image):
             filepath = result[0].data(0, Qt.UserRole)[1]
             show_image(filepath,result[0])
 
-def global_search(tree, entry_path, entry_global_search, show_image):
+def global_search(tree, entry_path, entry_global_search, show_image): # 修改中文名称
     """
     执行全局搜索。
     """
@@ -330,7 +331,7 @@ def muti_search(entry_path, entry_date_search,index_dict,elements):
                     search_dict=search_dict.get(id)
                     if search_dict==None:
                         break
-                result.append(search_dict.replace(NAME_SPACE,''))
+                result.append(search_dict.replace(NAME_SPACE,'') if search_dict else None)
     # print(dicts,result)
     return dicts,result
 def update_image_format(entry_image_format, tree,directory):

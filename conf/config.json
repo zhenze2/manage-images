@@ -16,17 +16,12 @@
     ],
     "default_path": "images",
     "deault_visual_path": "visual_images",
-    "MultiShow_elements": [
-        "SIC",
-        "SIT",
-        "SIE",
-        "SIH"
-    ],
     "elements_translation": {
         "SIC": "海冰密集度",
         "SIT": "海冰厚度",
-        "SIH": "海冰高度",
-        "SIE": "海冰面积",
-        "SIV": "海冰体积"
-    }
+        "SIE": "海冰范围",
+        "SIV": "海冰体积",
+        "SID": "海冰流速"
+    },
+    "Name_rule": "要素名称_年份_月份_日期"
 }

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea,QAction,QMessageBox
 from PyQt5.QtCore import Qt
 import sys
 import os
@@ -8,8 +8,8 @@ from conf.config import ConfigManager
 from utils.data_visual import DrawWindow
 from utils.ImageViewer import ShowImage,MultiImageDisplay
 
-
-
+PATH_INDEX=r"conf\index_image.pkl"
+PATH_CONFIG=r"conf\config.json"
 # PyQt5
 # 打包命令
 '''
@@ -17,17 +17,20 @@ pyinstaller --onefile --noconsole index_search\\Index_search.py
 '''
 '''
 Nuitka 打包
+
+python -m nuitka --standalone --mingw64 --onefile ^
+    --remove-output ^
+    --disable-console ^
+    --plugin-enable=pyqt5 ^
+    --output-dir=dist ^
+    --output-filename=a.exe ^
+    Index_search_Qt.py
 '''
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
         # 获取当前文件所在目录
-        # if getattr(sys, 'frozen', False):
-        #     # 获取程序所在的目录
-        #     self.current_dir = os.path.dirname(sys.executable)
-        # else:
-        #     self.current_dir=os.path.dirname(__file__)
         self.current_dir=os.path.dirname(sys.argv[0])
         update_dir(self.current_dir)
         
@@ -35,7 +38,7 @@ class MainWindow(QMainWindow):
         if not os.path.exists(conf_dir):
             os.makedirs(conf_dir)
         # 配置文件路径
-        self.config_file = os.path.join(self.current_dir, r"conf\config.json")
+        self.config_file = os.path.join(self.current_dir, PATH_CONFIG)
         
         # 创建配置管理器并加载配置
         self.config_manager = ConfigManager(self.config_file)
@@ -62,10 +65,11 @@ class MainWindow(QMainWindow):
         self.tree.setHeaderLabels([""])#["极地","要素","年","月","日","区域","范围"]
 
         # 创建标签显示文件名
-        self.label_filename = QLabel("所在类别下文件名:")
+        self.label_filename = QLabel("类中搜索:")
         self.entry_filename = QLineEdit()
-        self.entry_filename.setPlaceholderText("输入选中类别下部分图片名称")
+        self.entry_filename.setPlaceholderText("选中类别后输入截断后的图片名称(A_B_C_D,选中B,输入C_D)")
         self.button_search = QPushButton("局部搜索")
+        self.button_search.setToolTip('在选中类别下的图片中进行搜索')
 
         
         # 创建标签显示图片格式
@@ -95,11 +99,12 @@ class MainWindow(QMainWindow):
         self.entry_global_search = QLineEdit()
         self.entry_global_search.setPlaceholderText("输入完整图片名称")
         self.button_global_search = QPushButton("全局搜索")
+        self.button_global_search.setToolTip('在所有图片中进行搜索')
 
         # 创建时间间隔标签和输入框
         self.time_label = QLabel("时间间隔（秒）:")
         self.time_entry = QLineEdit()
-        self.time_entry.setPlaceholderText("输入时间间隔")
+        self.time_entry.setPlaceholderText("输入自动播放的时间间隔")
         self.time_entry.setText("0.1")  # 默认时间间隔为0.1秒
         
         
@@ -110,6 +115,7 @@ class MainWindow(QMainWindow):
         
         # 可视化文件
         self.button_load_file = QPushButton("可视化")
+        self.button_load_file.setToolTip('加载文件进行数据可视化')
         
         # 显示多张图片
         # self.multi_show_images=QLineEdit()
@@ -156,9 +162,9 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.button_global_search,5,2)
         self.main_layout.addWidget(self.time_label,6,0)
         self.main_layout.addWidget(self.time_entry,6,1)
-        self.main_layout.addWidget(self.button_load_file,7,0,alignment=Qt.AlignCenter)
+        self.main_layout.addWidget(self.button_load_file,6,2)
         # self.main_layout.addWidget(self.multi_show_images,7,1)
-        self.main_layout.addWidget(self.button_multi_image,7,2,alignment=Qt.AlignCenter)
+        self.main_layout.addWidget(self.button_multi_image,7,2)
         # self.main_layout.addWidget(checkbox_widget,8,0,1,3)
         self.main_layout.addWidget(self.muti_search,7,1)
         self.scroll_area.setFixedHeight(40)
@@ -185,7 +191,7 @@ class MainWindow(QMainWindow):
 
         browse_directory(self.entry_path,self.tree,image_path=self.default_path)
 
-        INDEX_IMAGE_FILE = os.path.join(self.current_dir,r"conf\index_image.pkl")
+        INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
         # 从文件加载索引数据
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # 如果没有加载到数据，则重新索引并保存到文件
@@ -193,7 +199,7 @@ class MainWindow(QMainWindow):
         
         # 把字符串写入新文件,用utf-8编码
         # with open ("index_image.txt",'w',encoding='utf-8') as f:
-            # f.write(str(INDEX_IMAGE))
+        #     f.write(str(INDEX_IMAGE))
         # self.clear_combos_layout()
         # self.create_combos(self.data, 0)
         # self.update_combos(0, 0)
@@ -206,7 +212,27 @@ class MainWindow(QMainWindow):
         #         if (mxa_len <= v_len): 
         #             mxa_len = v_len
         #     comboBox.view().setMinimumWidth(int(mxa_len+15))	# 设置自适应宽度
+        
+        # self.setWindowFlags(Qt.FramelessWindowHint)
 
+        # 添加菜单栏
+        # menubar=self.menuBar()
+        # # 创建帮助菜单
+        # help_menu = menubar.addMenu('帮助')
+        
+        # # 添加动作到帮助菜单
+        # help_action = QAction('查看帮助', self)
+        # help_action.triggered.connect(self.showHelp)
+        # help_menu.addAction(help_action)
+        
+
+    # def showHelp(self):
+    #     help_text = """
+    #     <p>点击空格可自动播放图片</p>
+    #     <p>点击A键可以播放上一张图片</p>
+    #     <p>点击D键可以播放下一张图片</p>
+    #     """
+    #     QMessageBox.information(self, '帮助', help_text)
     def update_checkboxes(self,dicts):
         self.hide_last_level_options()
         level_wid=0
@@ -238,7 +264,7 @@ class MainWindow(QMainWindow):
 
     def init_combs(self):
         self.combos = []
-        INDEX_IMAGE_FILE = os.path.join(self.current_dir,r"conf\index_image.pkl")
+        INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
         # 从文件加载索引数据
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # 如果没有加载到数据，则重新索引并保存到文件
@@ -378,7 +404,7 @@ class MainWindow(QMainWindow):
         self.scroll_area.setFixedHeight(40)
     def browse_directory(self):
         browse_directory(self.entry_path,self.tree)
-        INDEX_IMAGE_FILE = os.path.join(self.current_dir,r"conf\index_image.pkl")
+        INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
         # 从文件加载索引数据
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # 如果没有加载到数据，则重新索引并保存到文件
@@ -388,7 +414,7 @@ class MainWindow(QMainWindow):
         search(self.tree, self.entry_path, selected_category, self.entry_filename, self.show_image)
     def update_image_format(self):
         update_image_format(self.image_format_commbox,self.tree,self.entry_path.text())
-        INDEX_IMAGE_FILE = os.path.join(self.current_dir,r"conf\index_image.pkl")
+        INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
         # 从文件加载索引数据
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # print(INDEX_IMAGE)
@@ -397,7 +423,7 @@ class MainWindow(QMainWindow):
 
     def update_sep(self):
         update_sep(self.sep,self.tree,self.entry_path)
-        INDEX_IMAGE_FILE = os.path.join(self.current_dir,r"conf\index_image.pkl")
+        INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
         # 从文件加载索引数据
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # 如果没有加载到数据，则重新索引并保存到文件
@@ -442,7 +468,7 @@ class MainWindow(QMainWindow):
         if self.entry_muti_search.text() == "":
             self.hide_last_level_options()
             return
-        elements=self.config_manager.get("MultiShow_elements")
+        elements=self.config_manager.get("elements_translation").keys()
         
         input_elements=self.entry_elemets.text().replace('，',',').split(",")
         for i in input_elements:
@@ -463,6 +489,7 @@ class MainWindow(QMainWindow):
         if image_paths:
             multi_image_display = MultiImageDisplay()
             multi_image_display.show_images(image_paths)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

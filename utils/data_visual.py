@@ -1,5 +1,5 @@
 # draw_pic
-from PyQt5.QtWidgets import  QMainWindow,QVBoxLayout, QWidget, QPushButton, QLabel, QHBoxLayout, QGridLayout
+from PyQt5.QtWidgets import  QMainWindow, QWidget, QPushButton, QLabel, QHBoxLayout, QGridLayout
 import numpy as np
 import pandas as pd
 

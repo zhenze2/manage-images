@@ -1,8 +1,8 @@
 from math import ceil
 
-from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox
+from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction
 from PyQt5.QtCore import Qt,  QEvent, QRectF
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap,QKeyEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
 
 
@@ -66,7 +66,29 @@ class ShowImage(QMainWindow):
         self.next_button.clicked.connect(self.play_next_image)
         self.play_button.clicked.connect(self.auto_play)
         self.local_button.clicked.connect(self.play_local)
+        # 设置按钮长按绑定
+        self.prev_button.setAutoRepeat(True)    # 长按的时候出发点击事件重复触发
+        self.next_button.setAutoRepeat(True)
+        
+        # 添加菜单栏
+        menubar=self.menuBar()
+        # 创建帮助菜单
+        help_menu = menubar.addMenu('快捷键')
+
+        # 添加动作到帮助菜单
+        help_action = QAction('查看', self)
+        help_action.triggered.connect(self.showHelp)
+        help_menu.addAction(help_action)
         self.windows.append(self)
+
+    def showHelp(self):
+        help_text = """
+        <h3>快捷键</h3>
+        <p>空格：自动播放图片</p>
+        <p>A：播放上一张图片(长按连续播放)</p>
+        <p>D：播放下一张图片(长按连续播放)</p>
+        """
+        QMessageBox.information(self, '帮助', help_text)
 
     def show_image(self, image_path):
         self.image_path = image_path
@@ -305,6 +327,19 @@ class ShowImage(QMainWindow):
         # 自动播放下一张图片
         self.play_next_image()
 
+    def keyPressEvent(self, a0:QKeyEvent):
+        # print(a0.key())
+        # 重写键盘按下事件，实现键盘控制图片的播放
+        if a0.key() == Qt.Key_A:
+            self.play_last_image()
+        elif a0.key() == Qt.Key_D:
+            self.play_next_image()
+        elif a0.key() == Qt.Key_Space:
+            self.auto_play()
+        elif a0.key() == Qt.Key_Escape:
+            self.close()
+        else:
+            super().keyPressEvent(a0)
     def showEvent(self, event):
         super().showEvent(event)
         if self.image_type == 'raster':
