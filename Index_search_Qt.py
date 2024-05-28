@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea,QAction,QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea,QAction,QMessageBox,QMenu,QInputDialog
 from PyQt5.QtCore import Qt
 import sys
 import os
@@ -196,7 +196,6 @@ class MainWindow(QMainWindow):
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # 如果没有加载到数据，则重新索引并保存到文件
         self.data = INDEX_IMAGE
-        
         # 把字符串写入新文件,用utf-8编码
         # with open ("index_image.txt",'w',encoding='utf-8') as f:
         #     f.write(str(INDEX_IMAGE))
@@ -275,7 +274,7 @@ class MainWindow(QMainWindow):
         combs_widget.setLayout(self.combos_layout)
         roll_area = QScrollArea()
         roll_area.setWidgetResizable(True)
-        roll_area.setFixedHeight(combs_widget.sizeHint().height()+10)
+        roll_area.setFixedHeight(combs_widget.sizeHint().height()+20)
         roll_area.setWidget(combs_widget)
         self.main_layout.addWidget(roll_area, 9, 1)
     def clear_combos_layout(self):
@@ -464,19 +463,22 @@ class MainWindow(QMainWindow):
         event.accept()
 
     def show_multi_images(self):
+        c=self.getInputType()
         # 显示多张图片
         if self.entry_muti_search.text() == "":
             self.hide_last_level_options()
             return
-        elements=self.config_manager.get("elements_translation").keys()
-        
+        elements=list(self.config_manager.get("elements_translation").keys())
         input_elements=self.entry_elemets.text().replace('，',',').split(",")
+        # print(input_elements)
         for i in input_elements:
             if i not in elements and i!="":
                 elements.append(i)
         # print(elements)
-        dicts,self.paths = muti_search(self.entry_path,self.entry_muti_search,self.data,elements)
-        # print(dicts,paths)
+        # 弹出弹窗选择输入种类
+    
+        dicts,self.paths = muti_search(self.entry_path,self.entry_muti_search,self.data,elements,c)
+        # print(dicts,self.paths)
         if self.last_input != self.entry_muti_search.text():
             self.update_checkboxes(dicts)
         self.last_input=self.entry_muti_search.text()
@@ -489,6 +491,43 @@ class MainWindow(QMainWindow):
         if image_paths:
             multi_image_display = MultiImageDisplay()
             multi_image_display.show_images(image_paths)
+    # def getInputType(self):
+    #     menu = QMenu(self)
+    #     A = menu.addAction("A")
+    #     B = menu.addAction("B")
+
+    #     action = menu.exec_(self.mapToGlobal(self.sender().pos()))
+
+    #     if action == A:
+    #         return "A"
+    #     elif action == B:
+    #         return "B"
+    #     else:
+    #         return None
+    
+    # def getInputType(self):
+    #     dialog = QMessageBox()
+    #     dialog.setWindowTitle("选择输入类型")
+    #     dialog.setText("请选择要显示的图类:")
+    #     dialog.addButton("A", QMessageBox.YesRole)
+    #     dialog.addButton("B", QMessageBox.YesRole)
+    #     dialog.addButton("取消", QMessageBox.RejectRole)
+    #     result = dialog.exec_()
+
+    #     if result == 0:  # 用户选择了 "A"
+    #         return "A"
+    #     elif result == 1:  # 用户选择了 "B"
+    #         return "B"
+    #     else:  # 用户选择了 "取消" 或者关闭了对话框
+    #         return None
+    def getInputType(self):
+        items = ["A", "B"]
+        item, ok = QInputDialog.getItem(self, " ", "请选择图类", items, editable=False)
+
+        if ok and item:
+            return item
+        else:
+            return None
 
 
 if __name__ == "__main__":

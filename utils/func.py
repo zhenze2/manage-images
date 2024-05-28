@@ -90,6 +90,8 @@ def save_index_image(index_image):
     filename = os.path.join(CURRENT_DIR, r"conf\index_image.pkl")
     with open(filename, 'wb') as f:
         pickle.dump(index_image, f)
+
+
 def load_index_image(filename):
     try:
         with open(filename, 'rb') as f:
@@ -276,7 +278,7 @@ def global_search(tree, entry_path, entry_global_search, show_image): # 修改�
             filepath = result[0].data(0, Qt.UserRole)[1]
             show_image(filepath,result[0])
 
-def muti_search(entry_path, entry_date_search,index_dict,elements):
+def muti_search(entry_path, entry_date_search,index_dict,elements,cate='A'):
     # elements=["SIC","SIT","SIH","SIE"]
     # 获取待索引目录路径
     directory_to_index = entry_path.text()
@@ -298,42 +300,49 @@ def muti_search(entry_path, entry_date_search,index_dict,elements):
     for element in elements:
         # 组合完整的文件名
         al=[x for x in index_dict.keys() if element in x]
-        if len(al)==0:
-            for key, items in index_dict.items():
-                if type(items)==dict:
-                    a=[x for x in items.keys() if element in x]
-                    if len(a)>0:
-                        dicts.append({key:a})
-        else:
+        # if len(al)==0:
+        #     for key, items in index_dict.items():
+        #         if type(items)==dict:
+        #             a=[x for x in items.keys() if element in x]
+        #             if len(a)>0:
+        #                 dicts.append({key:a})
+        # else:
+        if len(al)>0:
             dicts.append(al)
     result=[]
     end_name = search_filename + DEFAULT_IMAGE_FORMAT
     ids=end_name.split(SEPARATOR)
-    # print(dicts)
-    # print(index_dict)
+
+    ta_dic=[]
     # 处理搜索路径，对添加的时间序列图和空间分布图处理
     for start in dicts:
-        if isinstance(start,dict):
-            for key,value in start.items():
-                search_ids=[key,value,NAME_SPACE.replace(SEPARATOR,"")]+ids
-                search_dict=index_dict
-                for id in search_ids:
-                    search_dict=search_dict.get(id)
-                    if search_dict==None:
-                        break
-                result.append(search_dict.replace(NAME_SPACE,''))
-        elif isinstance(start,list):
+        # if isinstance(start,dict):
+        #     for key,value in start.items():
+        #         search_ids=[key,value,NAME_SPACE.replace(SEPARATOR,"")]+ids
+        #         search_dict=index_dict
+        #         for id in search_ids:
+        #             search_dict=search_dict.get(id)
+        #             if search_dict==None:
+        #                 break
+        #         result.append(search_dict.replace(NAME_SPACE,''))
+        # elif isinstance(start,list):
+        if isinstance(start,list):
+            ta=[]
             for head in start:
-                search_ids=[head,NAME_SPACE.replace(SEPARATOR,"")]+ids
+                search_ids=[head,NAME_SPACE.replace(SEPARATOR,""),cate]+ids
                 # print(search_ids)
                 search_dict=index_dict
                 for id in search_ids:
                     search_dict=search_dict.get(id)
                     if search_dict==None:
                         break
-                result.append(search_dict.replace(NAME_SPACE,'') if search_dict else None)
-    # print(dicts,result)
-    return dicts,result
+                if search_dict:
+                    ta.append(head)
+                    result.append(search_dict.replace(NAME_SPACE,'') if search_dict else None)
+            ta_dic.append(ta)
+    # print(ta_dic,result)
+    return ta_dic,result
+
 def update_image_format(entry_image_format, tree,directory):
     """
     更新默认图像格式。

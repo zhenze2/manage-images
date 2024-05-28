@@ -468,6 +468,11 @@ class MultiImageDisplay(ShowImage):
         for path in image_path:
             self.pixmaps.append(QPixmap(path))
         self.graphics_view.setScene(self.graphics_scene)
+        # 统一所有图片的大小
+        max_width = min([pixmap.width() for pixmap in self.pixmaps])
+        max_height = min([pixmap.height() for pixmap in self.pixmaps])
+        for i in range(len(self.pixmaps)):
+            self.pixmaps[i] = self.pixmaps[i].scaled(max_width, max_height)
         self.resize_image_label()
 
     def resize_image_label(self):
