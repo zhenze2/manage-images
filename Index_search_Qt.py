@@ -523,7 +523,6 @@ class MainWindow(QMainWindow):
     def getInputType(self):
         items = ["A", "B"]
         item, ok = QInputDialog.getItem(self, " ", "请选择图类", items, editable=False)
-
         if ok and item:
             return item
         else:
