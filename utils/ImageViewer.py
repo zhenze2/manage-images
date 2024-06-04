@@ -1,10 +1,13 @@
 from math import ceil
 
-from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction
+from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog
 from PyQt5.QtCore import Qt,  QEvent, QRectF
 from PyQt5.QtGui import QPixmap,QKeyEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
-
+from netCDF4 import Dataset
+import pandas as pd
+import os
+from utils.func import Config
 
 class ShowImage(QMainWindow):
     windows=[]
@@ -16,6 +19,7 @@ class ShowImage(QMainWindow):
         self.timer_id=None
         self.time_entry=time_entry
         self.image_path = None
+        self.image_name = None
         self.pixmap = None
         self.svg=None
         self.setWindowTitle("Image Viewer")
@@ -70,15 +74,23 @@ class ShowImage(QMainWindow):
         self.prev_button.setAutoRepeat(True)    # 长按的时候出发点击事件重复触发
         self.next_button.setAutoRepeat(True)
         
+        
         # 添加菜单栏
         menubar=self.menuBar()
         # 创建帮助菜单
         help_menu = menubar.addMenu('快捷键')
-
         # 添加动作到帮助菜单
         help_action = QAction('查看', self)
         help_action.triggered.connect(self.showHelp)
         help_menu.addAction(help_action)
+        
+        export_menu = menubar.addMenu('导出')
+        export_action_fig = QAction('导出图片', self)
+        export_action_fig.triggered.connect(self.save_pixmap)
+        export_menu.addAction(export_action_fig)
+        export_action_nc = QAction('导出数据', self)
+        export_action_nc.triggered.connect(self.save_nc)
+        export_menu.addAction(export_action_nc)
         self.windows.append(self)
 
     def showHelp(self):
@@ -92,6 +104,8 @@ class ShowImage(QMainWindow):
 
     def show_image(self, image_path):
         self.image_path = image_path
+        # print(self.image_path, os.path.basename(self.image_path))
+        self.image_name=os.path.basename(self.image_path)
         if image_path.lower().endswith('.svg'):
             self.image_type = 'svg'
             self.show_svg(image_path)
@@ -291,6 +305,49 @@ class ShowImage(QMainWindow):
             self.time = float(self.time_entry.text())
             self.timer_id = self.startTimer(int(self.time * 1000))  # 启动定时器
 
+    def save_pixmap(self):
+        if self.pixmap:
+            out_path, selected_filter = QFileDialog.getSaveFileName(None, "Save Image", self.image_name, "JPEG 文件 (*.jpg);;PNG 文件 (*.png);;BMP 文件 (*.bmp)")
+            format_str = "JPG"
+            # 根据所选过滤器确定文件扩展名
+            if "JPEG" in selected_filter:
+                format_str = "JPG"
+            elif "PNG" in selected_filter:
+                format_str = "PNG"
+            elif "BMP" in selected_filter:
+                format_str = "BMP"
+            if out_path:
+                self.pixmap.save(out_path, format_str, quality=100)
+
+    def save_nc(self):
+        # 读取CSV文件
+        path = os.path.join(Config.current_dir,"1.xlsx")
+        data = pd.read_excel(path)
+
+        # 定义NetCDF文件名
+        nc_file = '1.nc'
+        # 创建NetCDF文件
+        with Dataset(nc_file, 'w', format='NETCDF4') as nc:
+            # 定义维度，例如时间（time）和空间（space）
+            time_dim = nc.createDimension('time', len(data['time_column']))  # 替换'time_column'为你的实际时间列名
+            space_dim = nc.createDimension('space', len(data['space_column']))  # 替换'space_column'为你的实际空间列名
+
+            # 创建变量
+            time_var = nc.createVariable('time', 'f8', ('time',))  # 时间变量
+            space_var = nc.createVariable('space', 'i4', ('space',))  # 空间变量
+            data_var = nc.createVariable('data_variable', 'f8', ('time', 'space'))  # 你的数据变量
+
+            # 将数据填充到变量中
+            time_var[:] = data['time_column'].values  # 用实际时间数据填充
+            space_var[:] = data['space_column'].values  # 用实际空间数据填充
+            data_var[:] = data['your_data_column'].values.reshape(-1, len(data['space_column']))  # 用你的数据填充，确保数据形状正确
+
+            # 设置变量属性
+            time_var.long_name = 'Time'  # 变量描述
+            time_var.units = 'seconds since 1970-01-01 00:00:00'  # 单位
+            space_var.long_name = 'Space'  # 变量描述
+            data_var.long_name = 'Your Data Description'  # 数据描述
+            data_var.units = 'Your Data Units'  # 数据单位
     def eventFilter(self, obj, event):
         '''
         事件过滤器，处理鼠标滚轮事件和拖动事件，实现图片的放大缩小和拖动
@@ -564,3 +621,75 @@ class MultiImageDisplay(ShowImage):
             return num1
         else:
             return num2
+
+
+if __name__ == "__main__":
+    "测试保存"
+    # app = QApplication(sys.argv)
+    
+    # # 假设image_path是你的图片路径，out_path是你想保存的jpg文件路径
+    # # image_path, _  = QFileDialog.getOpenFileName()
+    # # out_path = QFileDialog.getExistingDirectory()
+    
+    # image_path=r"D:\source_python\Index_search\images\concentration_A\SIC_A_2000_01_01.png"
+    # out_path=r"C:\Users\TAO\Desktop"
+    # pixmap = QPixmap(image_path)
+    # out_path, a = QFileDialog.getSaveFileName(None, "Save Image", "", "JPEG 文件 (*.jpg);;PNG 文件 (*.png);;BMP 文件 (*.bmp)")
+    # print(out_path,a)
+    # # pixmap.save(f"{out_path}/test1.jpg", "JPG",quality=100)
+    # # pixmap.save(f"{out_path}/test2.jpg", "JPG")
+    
+    # print("Image saved successfully.")
+    # app.exit()
+
+    # 读取CSV文件
+    data = pd.read_excel('1.xlsx')
+
+    # 定义NetCDF文件名
+    nc_file = '1.nc'
+
+    # 创建NetCDF文件
+    with Dataset(nc_file, 'w', format='NETCDF4') as nc:
+        # 定义维度，例如时间（time）和空间（space）
+        time_dim = nc.createDimension('time', len(data['time_column']))  # 替换'time_column'为你的实际时间列名
+        space_dim = nc.createDimension('space', len(data['space_column']))  # 替换'space_column'为你的实际空间列名
+
+        # 创建变量
+        time_var = nc.createVariable('time', 'f8', ('time',))  # 时间变量
+        space_var = nc.createVariable('space', 'i4', ('space',))  # 空间变量
+        data_var = nc.createVariable('data_variable', 'f8', ('time', 'space'))  # 你的数据变量
+
+        # 将数据填充到变量中
+        time_var[:] = data['time_column'].values  # 用实际时间数据填充
+        space_var[:] = data['space_column'].values  # 用实际空间数据填充
+        data_var[:] = data['your_data_column'].values.reshape(-1, len(data['space_column']))  # 用你的数据填充，确保数据形状正确
+
+        # 设置变量属性
+        time_var.long_name = 'Time'  # 变量描述
+        time_var.units = 'seconds since 1970-01-01 00:00:00'  # 单位
+        space_var.long_name = 'Space'  # 变量描述
+        data_var.long_name = 'Your Data Description'  # 数据描述
+        data_var.units = 'Your Data Units'  # 数据单位
+    # 指定NetCDF文件的路径
+    # file_path = '1.nc'
+
+    # # 打开NetCDF文件
+    # dataset = Dataset(file_path)
+
+    # # 探索文件内容
+    # print("Global attributes:")
+    # for attr in dataset.ncattrs():
+    #     print(f"{attr}: {dataset.getncattr(attr)}")
+
+    # print("\nDimensions:")
+    # for dim_name, dim in dataset.dimensions.items():
+    #     print(f"{dim_name}: {len(dim)}")
+
+    # print("\nVariables:")
+    # for var_name, var in dataset.variables.items():
+    #     print(f"{var_name}: {var.datatype} {var.dimensions}")
+
+    # # 读取某个变量的数据
+    # # var_data = dataset.variables['variable_name'][:]
+    # # print(f"\nData from variable 'variable_name':\n{var_data}")
+    # dataset.close()

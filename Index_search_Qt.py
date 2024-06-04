@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
         
         # 获取当前文件所在目录
         self.current_dir=os.path.dirname(sys.argv[0])
-        update_dir(self.current_dir)
+        Config.current_dir = self.current_dir
         
         conf_dir = os.path.join(self.current_dir, "conf")
         if not os.path.exists(conf_dir):
@@ -43,7 +43,8 @@ class MainWindow(QMainWindow):
         # 创建配置管理器并加载配置
         self.config_manager = ConfigManager(self.config_file)
         
-        update_elements_translation(self.config_manager.get("elements_translation"))
+        Config.ELEMENTS_TRANSLATION=self.config_manager.get("elements_translation")
+
         self.default_path=os.path.join(self.current_dir,self.config_manager.get("default_path"))
         self.checkboxes = []
         self.last_level_options = [] 

@@ -5,24 +5,19 @@ import copy
 import os
 import re
 
+class CONFIG():
+    def __init__(self):
+        self.current_dir=None # 主文件所在目录
+        self.ELEMENTS_TRANSLATION=None # 中文名称转换
+
+Config=CONFIG()
 # 初始文件格式
 DEFAULT_IMAGE_FORMAT = ".png" #[".jpg", ".jpeg", ".png"]
-# 默认分隔符
-SEPARATOR = "_"
-# 主文件所在目录
-CURRENT_DIR=None
-
-ELEMENTS_TRANSLATION = None
-
+SEPARATOR = "_" # 默认分隔符
 NAME_SPACE=SEPARATOR+'空间分布图'
 NAME_TIME=SEPARATOR+'时间序列图'
 
-def update_elements_translation(dic):
-    global ELEMENTS_TRANSLATION
-    ELEMENTS_TRANSLATION = dic
-def update_dir(current_dir):
-    global CURRENT_DIR
-    CURRENT_DIR=current_dir
+
 
 def chinese_to_arabic_sort(arr):
     chinese_numbers= {
@@ -87,7 +82,7 @@ def index_image_files(directory, image_format):  # 修改中文名称
     return index
 
 def save_index_image(index_image):
-    filename = os.path.join(CURRENT_DIR, r"conf\index_image.pkl")
+    filename = os.path.join(Config.current_dir, r"conf\index_image.pkl")
     with open(filename, 'wb') as f:
         pickle.dump(index_image, f)
 
@@ -139,7 +134,7 @@ def update_treeview(tree, parent, categories): # 修改中文名称
         item = QTreeWidgetItem(parent)
         
         # 修改中文名称显示
-        dic=ELEMENTS_TRANSLATION
+        dic=Config.ELEMENTS_TRANSLATION
         item.setText(0, category)
         for k,v in dic.items():
             if k in category:
@@ -222,7 +217,7 @@ def search(tree, entry_path, selected_category, entry_filename, show_image):  # 
 
     # 组合完整的文件名
     full_name = selected_category.text() + SEPARATOR + search_filename + DEFAULT_IMAGE_FORMAT
-    for k,v in ELEMENTS_TRANSLATION.items():
+    for k,v in Config.ELEMENTS_TRANSLATION.items():
         full_name=full_name.replace(k,v)
     # 在树中搜索文件节点
     result = []
@@ -261,7 +256,7 @@ def global_search(tree, entry_path, entry_global_search, show_image): # 修改�
 
     # 组合完整的文件名
     full_name = search_filename + DEFAULT_IMAGE_FORMAT
-    for k,v in ELEMENTS_TRANSLATION.items():
+    for k,v in Config.ELEMENTS_TRANSLATION.items():
         full_name=full_name.replace(k,v)
     # 在树中搜索文件节点
     result = []
