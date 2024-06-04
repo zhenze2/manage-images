@@ -163,8 +163,8 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.button_global_search,5,2)
         self.main_layout.addWidget(self.time_label,6,0)
         self.main_layout.addWidget(self.time_entry,6,1)
-        self.main_layout.addWidget(self.button_load_file,6,2)
-        # self.main_layout.addWidget(self.multi_show_images,7,1)
+        # self.main_layout.addWidget(self.button_load_file,6,2)
+
         self.main_layout.addWidget(self.button_multi_image,7,2)
         # self.main_layout.addWidget(checkbox_widget,8,0,1,3)
         self.main_layout.addWidget(self.muti_search,7,1)

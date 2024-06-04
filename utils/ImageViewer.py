@@ -1,6 +1,6 @@
 from math import ceil
 
-from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog
+from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel
 from PyQt5.QtCore import Qt,  QEvent, QRectF
 from PyQt5.QtGui import QPixmap,QKeyEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
@@ -323,31 +323,39 @@ class ShowImage(QMainWindow):
         # 读取CSV文件
         path = os.path.join(Config.current_dir,"1.xlsx")
         data = pd.read_excel(path)
-
-        # 定义NetCDF文件名
-        nc_file = '1.nc'
+        dialog=RangeInputDialog()
+        dialog.show()
+        longitude_scale, latitude_scale, time_scale=(0,0),(0,0),(0,0)
+        if dialog.exec() == QDialog.Accepted:
+            longitude_scale, latitude_scale, time_scale = dialog.get_values()
+        elif dialog.exec() == QDialog.Rejected:
+            return
+        nc_name=f'{time_scale}_{latitude_scale}_{longitude_scale}.nc'
+        nc_file,_ = QFileDialog.getSaveFileName(None, "Save Nc File", nc_name, "NETCDF4 文件 (*.nc)")
         # 创建NetCDF文件
-        with Dataset(nc_file, 'w', format='NETCDF4') as nc:
-            # 定义维度，例如时间（time）和空间（space）
-            time_dim = nc.createDimension('time', len(data['time_column']))  # 替换'time_column'为你的实际时间列名
-            space_dim = nc.createDimension('space', len(data['space_column']))  # 替换'space_column'为你的实际空间列名
+        if nc_file:
+            with Dataset(nc_file, 'w', format='NETCDF4') as nc:
+                # 定义维度，例如时间（time）和空间（space）
+                time_dim = nc.createDimension('time', len(data['time_column']))  # 替换'time_column'为你的实际时间列名
+                space_dim = nc.createDimension('space', len(data['space_column']))  # 替换'space_column'为你的实际空间列名
 
-            # 创建变量
-            time_var = nc.createVariable('time', 'f8', ('time',))  # 时间变量
-            space_var = nc.createVariable('space', 'i4', ('space',))  # 空间变量
-            data_var = nc.createVariable('data_variable', 'f8', ('time', 'space'))  # 你的数据变量
+                # 创建变量
+                time_var = nc.createVariable('time', 'f8', ('time',))  # 时间变量
+                space_var = nc.createVariable('space', 'i4', ('space',))  # 空间变量
+                data_var = nc.createVariable('data_variable', 'f8', ('time', 'space'))  # 你的数据变量
 
-            # 将数据填充到变量中
-            time_var[:] = data['time_column'].values  # 用实际时间数据填充
-            space_var[:] = data['space_column'].values  # 用实际空间数据填充
-            data_var[:] = data['your_data_column'].values.reshape(-1, len(data['space_column']))  # 用你的数据填充，确保数据形状正确
+                # 将数据填充到变量中
+                time_var[:] = data['time_column'].values  # 用实际时间数据填充
+                space_var[:] = data['space_column'].values  # 用实际空间数据填充
+                data_var[:] = data['your_data_column'].values.reshape(-1, len(data['space_column']))  # 用你的数据填充，确保数据形状正确
 
-            # 设置变量属性
-            time_var.long_name = 'Time'  # 变量描述
-            time_var.units = 'seconds since 1970-01-01 00:00:00'  # 单位
-            space_var.long_name = 'Space'  # 变量描述
-            data_var.long_name = 'Your Data Description'  # 数据描述
-            data_var.units = 'Your Data Units'  # 数据单位
+                # 设置变量属性
+                time_var.long_name = 'Time'  # 变量描述
+                time_var.units = 'seconds since 1970-01-01 00:00:00'  # 单位
+                space_var.long_name = 'Space'  # 变量描述
+                data_var.long_name = 'Your Data Description'  # 数据描述
+                data_var.units = 'Your Data Units'  # 数据单位
+
     def eventFilter(self, obj, event):
         '''
         事件过滤器，处理鼠标滚轮事件和拖动事件，实现图片的放大缩小和拖动
@@ -693,3 +701,92 @@ if __name__ == "__main__":
     # # var_data = dataset.variables['variable_name'][:]
     # # print(f"\nData from variable 'variable_name':\n{var_data}")
     # dataset.close()
+
+class RangeInputDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout()
+
+        form_layout = QFormLayout()
+
+        # 创建两个 QDoubleSpinBox 控件用于经度范围
+        self.longitude_start = QDoubleSpinBox()
+        self.longitude_end = QDoubleSpinBox()
+        self.longitude_start.setRange(-180.0, 180.0)
+        self.longitude_start.setSingleStep(0.1)
+        self.longitude_end.setRange(-180.0, 180.0)
+        self.longitude_end.setSingleStep(0.1)
+        
+        longitude_layout = QHBoxLayout()
+        self.longitude_start.setFixedWidth(100)
+        self.longitude_end.setFixedWidth(100)
+        longitude_layout.addWidget(QLabel("开始"))
+        longitude_layout.addWidget(self.longitude_start)
+        longitude_layout.addWidget(QLabel("结束"))
+        longitude_layout.addWidget(self.longitude_end)
+
+        # 创建两个 QDoubleSpinBox 控件用于纬度范围
+        self.latitude_start = QDoubleSpinBox()
+        self.latitude_end = QDoubleSpinBox()
+        self.latitude_start.setRange(-90.0, 90.0)
+        self.latitude_start.setSingleStep(0.1)
+        self.latitude_end.setRange(-90.0, 90.0)
+        self.latitude_end.setSingleStep(0.1)
+        # 设置输入框宽度一致
+        self.latitude_start.setFixedWidth(100)
+        self.latitude_end.setFixedWidth(100)
+        latitude_layout = QHBoxLayout()
+        latitude_layout.addWidget(QLabel("开始"))
+        latitude_layout.addWidget(self.latitude_start)
+        latitude_layout.addWidget(QLabel("结束"))
+        latitude_layout.addWidget(self.latitude_end)
+
+        # 创建两个 QDoubleSpinBox 控件用于时间范围
+        self.time_start = QDoubleSpinBox()
+        self.time_end = QDoubleSpinBox()
+        self.time_start.setRange(0.0, 24.0)  # 示例范围，可以根据需要调整
+        self.time_start.setSingleStep(0.1)
+        self.time_end.setRange(0.0, 24.0)
+        self.time_end.setSingleStep(0.1)
+        # 设置输入框宽度一致
+        self.time_start.setFixedWidth(100)
+        self.time_end.setFixedWidth(100)
+        time_layout = QHBoxLayout()
+        time_layout.addWidget(QLabel("开始"))
+        time_layout.addWidget(self.time_start)
+        time_layout.addWidget(QLabel("结束"))
+        time_layout.addWidget(self.time_end)
+
+        # 将每个水平布局添加到表单布局
+        form_layout.addRow("经度范围:", longitude_layout)
+        form_layout.addRow("纬度范围:", latitude_layout)
+        form_layout.addRow("时间范围:", time_layout)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+
+        self.longitude_start.valueChanged.connect(lambda: self.update_ac_value(self.longitude_start,self.longitude_end))
+        self.latitude_start.valueChanged.connect(lambda: self.update_ac_value(self.latitude_start,self.latitude_end))
+        self.time_start.valueChanged.connect(lambda: self.update_ac_value(self.time_start,self.time_end))
+        layout.addLayout(form_layout)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+        self.setWindowTitle("选择范围")
+
+    def update_ac_value(self,widget1,widget2):
+        value=widget1.value()
+        if widget2.value()<value:
+            widget2.setValue(value)
+    def get_values(self):
+        longitude_start = self.longitude_start.value()
+        longitude_end = self.longitude_end.value()
+        latitude_start = self.latitude_start.value()
+        latitude_end = self.latitude_end.value()
+        time_start = self.time_start.value()
+        time_end = self.time_end.value()
+        return (longitude_start, longitude_end), (latitude_start, latitude_end), (time_start, time_end)

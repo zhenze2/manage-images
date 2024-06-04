@@ -7,7 +7,7 @@ DEFAULT_CONFIG = {
     "image_formats": [".png",".jpg",".svg",".jpeg",".bmp",".gif",".tiff"],
     "default_path": "images",
     "deault_visual_path": "visual_images",
-    "elements_translation": {"SIC":'海冰密集度',"SIT":'海冰厚度',"SIE":'海冰范围',"SIV":'海冰体积','SID':'海冰流速'},
+    "elements_translation": {"SIC":'海冰密集度',"SIT":'海冰厚度',"SIE":'海冰范围',"SIV":'海冰体积','SID':'海冰流速',"SIA": "海冰面积"},
     "Name_rule":'要素名称_年份_月份_日期',
 }
 
@@ -34,7 +34,7 @@ class ConfigManager:
         # 保存当前配置到文件中
         with open(self.config_file, 'w', encoding='utf-8') as f:
             f.write("# 这是一个配置文件，用于存储程序的设置\n")
-            f.write("# 请不要修改本文件，除非你知道你在做什么！\n")
+            f.write("# 请不要修改本文件，如需修改请按照格式增改\n")
             f.write(json.dumps(self.config, indent=4, ensure_ascii=False))
 
     def check(self):

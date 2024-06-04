@@ -50,7 +50,7 @@ def chinese_to_arabic_sort(arr):
     return sorted_b
 def index_image_files(directory, image_format):  # 修改中文名称
     index = {}  # 初始化索引字典
-    pattern = r'_\d{4}(?:_\d{2})?'+image_format+'$' #判断是否为年份或者月份结尾
+    pattern = r'_\d{4}?'+image_format+'$' #判断是否为年份或者月份结尾，'_\d{4}(?:_\d{2})?'
     # re.search(pattern, file)
     # 索引了所在目录内包括子目录所有符合条件的文件
     for root, dirs, files in os.walk(directory):
