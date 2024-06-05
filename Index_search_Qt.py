@@ -108,10 +108,10 @@ class MainWindow(QMainWindow):
         self.time_entry.setPlaceholderText("输入自动播放的时间间隔")
         self.time_entry.setText("0.1")  # 默认时间间隔为0.1秒
         
-        
         # 选中的类别
         global selected_category
         selected_category = QLabel("")
+        selected_category.setTextInteractionFlags(Qt.TextSelectableByMouse)
         selected_category.setAlignment(Qt.AlignCenter)
         
         # 可视化文件
