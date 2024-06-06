@@ -288,6 +288,10 @@ def muti_search(entry_path, entry_date_search,index_dict,elements,tree,cate='A')
     if not search_filename:
         QMessageBox.critical(None, "错误", "查询日期格式错误")
         return
+    # 检查是search_filename是否是日期
+    if not re.match(r'\d{4}'+SEPARATOR+r'\d{2}'+SEPARATOR+r'\d{2}', search_filename):
+        QMessageBox.critical(None, "错误", "查询日期格式错误")
+        return None,None,None
     dicts=[]
     for element in elements:
         # 组合完整的文件名

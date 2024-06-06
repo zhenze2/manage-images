@@ -467,6 +467,8 @@ class MainWindow(QMainWindow):
         # import time
         # start_time = time.perf_counter()
         dicts,self.paths,items = muti_search(self.entry_path,self.entry_muti_search,self.data,elements,self.tree,c)
+        if dicts is None:
+            return
         # print(dicts,self.paths)
         # end_time = time.perf_counter()
         # execution_time = end_time - start_time
@@ -481,9 +483,13 @@ class MainWindow(QMainWindow):
                 # print(self.checkboxes[i].text())
                 # print(image_paths[i])
                 image_paths.append(self.paths[i])
+        c_name=[]
+        for i in dicts:
+            c_name=c_name+i
         if image_paths:
             # multi_image_display = MultiImageDisplay()
-            multi_image_display = MutiShowImage(tree=self.tree,time_entry=self.time_entry)
+            multi_image_display = MutiShowImage(tree=self.tree,time_entry=self.time_entry,image_paths=image_paths)
+            multi_image_display.check_names=c_name
             multi_image_display.current_Nodes=items
             multi_image_display.show_images(image_paths)
     # def getInputType(self):
