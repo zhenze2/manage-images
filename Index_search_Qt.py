@@ -6,7 +6,7 @@ import os
 from utils.func import *
 from conf.config import ConfigManager
 from utils.data_visual import DrawWindow
-from utils.ImageViewer import ShowImage,MultiImageDisplay
+from utils.ImageViewer import ShowImage,MultiImageDisplay,MutiShowImage
 
 PATH_INDEX=r"conf\index_image.pkl"
 PATH_CONFIG=r"conf\config.json"
@@ -163,7 +163,7 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.button_global_search,5,2)
         self.main_layout.addWidget(self.time_label,6,0)
         self.main_layout.addWidget(self.time_entry,6,1)
-        # self.main_layout.addWidget(self.button_load_file,6,2)
+        self.main_layout.addWidget(self.button_load_file,6,2)
 
         self.main_layout.addWidget(self.button_multi_image,7,2)
         # self.main_layout.addWidget(checkbox_widget,8,0,1,3)
@@ -237,28 +237,15 @@ class MainWindow(QMainWindow):
         self.hide_last_level_options()
         level_wid=0
         for ops in dicts:
-            if type(ops)==dict:
-                if len(ops.values())>1:
-                    i=0
-                    for key,op in ops.items():
-                        checkbox = QCheckBox(op)
-                        checkbox.setChecked(True)
-                        checkbox.setProperty("parent", key)
-                        self.checkbox_layout.addWidget(checkbox,i,level_wid)
-                        self.checkboxes.append(checkbox)
-                        i+=1
-                    level_wid+=1
-            else:
-                # if len(ops)>1:
-                i=0
-                for op in ops:
-                    checkbox = QCheckBox(op)
-                    checkbox.setChecked(True)
-                    checkbox.setProperty("parent", None)
-                    self.checkbox_layout.addWidget(checkbox,i,level_wid)
-                    self.checkboxes.append(checkbox)
-                    i+=1
-                level_wid+=1
+            i=0
+            for op in ops:
+                checkbox = QCheckBox(op)
+                checkbox.setChecked(True)
+                checkbox.setProperty("parent", None)
+                self.checkbox_layout.addWidget(checkbox,i,level_wid)
+                self.checkboxes.append(checkbox)
+                i+=1
+            level_wid+=1
         rowcount=self.checkbox_layout.rowCount()
         self.scroll_area.setFixedHeight(rowcount*(self.checkboxes[0].sizeHint().height()+10))
 
@@ -477,8 +464,13 @@ class MainWindow(QMainWindow):
                 elements.append(i)
         # print(elements)
         # 弹出弹窗选择输入种类
-    
-        dicts,self.paths = muti_search(self.entry_path,self.entry_muti_search,self.data,elements,c)
+        # import time
+        # start_time = time.perf_counter()
+        dicts,self.paths,items = muti_search(self.entry_path,self.entry_muti_search,self.data,elements,self.tree,c)
+        # print(dicts,self.paths)
+        # end_time = time.perf_counter()
+        # execution_time = end_time - start_time
+        # print(f"函数执行时间: {execution_time} 秒")
         # print(dicts,self.paths)
         if self.last_input != self.entry_muti_search.text():
             self.update_checkboxes(dicts)
@@ -490,7 +482,9 @@ class MainWindow(QMainWindow):
                 # print(image_paths[i])
                 image_paths.append(self.paths[i])
         if image_paths:
-            multi_image_display = MultiImageDisplay()
+            # multi_image_display = MultiImageDisplay()
+            multi_image_display = MutiShowImage(tree=self.tree,time_entry=self.time_entry)
+            multi_image_display.current_Nodes=items
             multi_image_display.show_images(image_paths)
     # def getInputType(self):
     #     menu = QMenu(self)
