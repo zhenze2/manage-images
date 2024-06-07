@@ -1137,7 +1137,7 @@ if __name__ == "__main__":
     import time
     app = QApplication(sys.argv)
     images=[r'D:\source_python\Index_search\images00\1-1.png']*3
-    images=[r'D:\source_python\Index_search\1.svg']*16
+    images=[r'D:\source_python\Index_search\images00\1.svg']*16
     # images,_=QFileDialog.getOpenFileNames(None, "Open file", 'c:\\', 'Image files(*.jpg *.gif *.png *.jpeg *.svg)')
     # print(images)
     # ShowImage(None,None).show_image(image_path=images[0])
