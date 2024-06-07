@@ -63,7 +63,7 @@ class MainWindow(QMainWindow):
 
         # 创建树形视图
         self.tree = QTreeWidget(self)
-        self.tree.setHeaderLabels([""])#["极地","要素","年","月","日","区域","范围"]
+        self.tree.setHeaderLabels(["目录"])
 
         # 创建标签显示文件名
         self.label_filename = QLabel("类中搜索:")
@@ -360,20 +360,23 @@ class MainWindow(QMainWindow):
             directory_path=image_path
         else:
             directory_path = QFileDialog.getExistingDirectory()
+        if directory_path:
+            self.entry_path.setText(directory_path)
+            self.indexing_thread = IndexingThread(directory_path, DEFAULT_IMAGE_FORMAT)
+            self.indexing_thread.indexing_done.connect(self.on_indexing_done)
+            self.indexing_thread.error_signal.connect(self.on_error)
+            self.indexing_thread.start()
         INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
         # 从文件加载索引数据
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # 如果没有加载到数据，则重新索引并保存到文件
         self.data = INDEX_IMAGE
-        if directory_path:
-            self.entry_path.setText(directory_path)
-            self.indexing_thread = IndexingThread(directory_path, DEFAULT_IMAGE_FORMAT)
-            self.indexing_thread.indexing_done.connect(self.on_indexing_done)
-            self.indexing_thread.start()
     def on_indexing_done(self, category_index):
         self.tree.clear()
         update_treeview(self.tree, self.tree, category_index)
-
+    def on_error(self, message):
+        self.tree.clear()
+        QMessageBox.critical(self, "错误", message)
     def search(self):
         search(self.tree, self.entry_path, selected_category, self.entry_filename, self.show_image)
     def update_image_format(self):
@@ -386,7 +389,8 @@ class MainWindow(QMainWindow):
         self.data = INDEX_IMAGE
 
     def update_sep(self):
-        update_sep(self.sep,self.tree,self.entry_path)
+        update_sep(self.sep)
+        self.browse_directory(self.entry_path.text())
         INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
         # 从文件加载索引数据
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)

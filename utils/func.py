@@ -265,15 +265,13 @@ def update_image_format(entry_image_format, tree,directory):
     DEFAULT_IMAGE_FORMAT = entry_image_format.currentText()
     update_category_tree(tree,directory)
 
-def update_sep(sep,tree,entry_path):
+def update_sep(sep):
         global SEPARATOR
         global NAME_SPACE
         global NAME_TIME
         SEPARATOR=sep.currentText()
         NAME_SPACE=SEPARATOR+'空间分布图'
         NAME_TIME=SEPARATOR+'时间序列图'
-        browse_directory(entry_path,tree,entry_path.text())
-        
 def find_node_by_path(tree, path):
     def find_node_recursive(item, path):
         if item is None or len(path)==0:
@@ -317,7 +315,7 @@ def load_index_image(directory):
 
 class IndexingThread(QThread):
     indexing_done = pyqtSignal(dict)
-
+    error_signal = pyqtSignal(str)
     def __init__(self, directory, image_format, parent=None):
         super().__init__(parent)
         self.directory = directory
@@ -325,7 +323,10 @@ class IndexingThread(QThread):
 
     def run(self):
         index = index_image_files(self.directory, self.image_format)
-        self.indexing_done.emit(index)
+        if not index:
+            self.error_signal.emit("未找到任何图像文件")
+        else:
+            self.indexing_done.emit(index)
 def index_image_files(directory, image_format):
     # index = load_index_image(directory)
     # if index is not None:
@@ -355,9 +356,9 @@ def index_image_files(directory, image_format):
                     curr_index = curr_index.setdefault(category, {})
 
                 curr_index[filename] = os.path.join(root, file)
-    
+
     if not index:
-        QMessageBox.information(None, "错误", "未找到规范格式的图片文件")
+        return {}
 
     save_index_image(index, directory)
     return index
