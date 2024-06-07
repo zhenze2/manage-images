@@ -7,7 +7,7 @@ from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
 from netCDF4 import Dataset
 import pandas as pd
 import os
-# from utils.func import Config
+from utils.func import Config
 
 class ShowImage(QMainWindow):
     windows=[]
@@ -746,7 +746,7 @@ class MutiShowImage(ShowImage):
         self.setMinimumSize(800, 600)
         main_layout = QVBoxLayout()
         grid_layout = QGridLayout()  # 使用网格布局
-
+        row_count = int(len(self.image_paths)**0.5+0.5)
         for i in range(len(self.image_paths)):
             graphics_view = QGraphicsView()
             graphics_scene = QGraphicsScene()
@@ -757,8 +757,8 @@ class MutiShowImage(ShowImage):
             self.graphics_views.append(graphics_view)
             self.graphics_scenes.append(graphics_scene)
 
-            row = i // 2  # 行数
-            col = i % 2  # 列数
+            row = i // row_count  # 行数
+            col = i % row_count  # 列数
             grid_layout.addWidget(graphics_view, row, col)
 
         grid_layout.setContentsMargins(0, 0, 0, 0)
@@ -810,6 +810,7 @@ class MutiShowImage(ShowImage):
         step_scroll.setContentsMargins(0, 0, 0, 0)
         step_scroll_widget=QWidget()
         step_scroll_widget.setLayout(step_scroll)
+        step_scroll_widget.setFixedHeight(50)
         main_layout.addWidget(step_scroll_widget)
 
         central_widget = QWidget()
@@ -825,14 +826,6 @@ class MutiShowImage(ShowImage):
         self.prev_button.setAutoRepeat(True)
         self.next_button.setAutoRepeat(True)
         self.windows.append(self)
-    def scroll(self, scroll_area, direction):
-        # 获取当前的水平滚动条值
-        bar = scroll_area.horizontalScrollBar()
-        step = 20  # 设定步长
-        if direction == 'left':
-            bar.setValue(bar.value() - step)
-        elif direction == 'right':
-            bar.setValue(bar.value() + step)
     def show_images(self, image_paths,index=None):
         if index is not None:
             # print("Show image in index:",index," with path:",image_paths,'and lenth of image_paths:',len(self.image_paths))
@@ -876,6 +869,16 @@ class MutiShowImage(ShowImage):
         self.graphics_views[index].fitInView(svg_item, Qt.KeepAspectRatio)
         self.graphics_views[index].show()
 
+    def resize_svg(self):
+        for i, svg in enumerate(self.svgs):
+            svg_item = QGraphicsSvgItem()
+            svg_item.setSharedRenderer(svg)
+            self.graphics_scenes[i].clear()
+            self.graphics_scenes[i].addItem(svg_item)
+            self.graphics_views[i].setScene(self.graphics_scenes[i])
+            self.graphics_scenes[i].setSceneRect(QRectF(svg.viewBoxF()))
+            self.graphics_views[i].fitInView(svg_item, Qt.KeepAspectRatio)
+            self.graphics_views[i].show()
     def show_raster_image(self, image_path, index):
         pixmap = QPixmap(image_path)
         if index >= len(self.pixmaps):
@@ -1056,52 +1059,6 @@ class MutiShowImage(ShowImage):
                 self.timers[i].start(int(float(self.time_entry.text()) * 1000))
             self.play_button.setText("停止播放")
 
-    def save_pixmap(self):
-        for i, pixmap in enumerate(self.pixmaps):
-            if pixmap:
-                out_path, selected_filter = QFileDialog.getSaveFileName(
-                    None, f"Save Image {i+1}", self.image_names[i], 
-                    "JPEG 文件 (*.jpg);;PNG 文件 (*.png);;BMP 文件 (*.bmp)"
-                )
-                format_str = "JPG"
-                if "JPEG" in selected_filter:
-                    format_str = "JPG"
-                elif "PNG" in selected_filter:
-                    format_str = "PNG"
-                elif "BMP" in selected_filter:
-                    format_str = "BMP"
-                if out_path:
-                    pixmap.save(out_path, format_str, quality=100)
-
-    def save_nc(self):
-        path = os.path.join(Config.current_dir, "1.xlsx")
-        data = pd.read_excel(path)
-        dialog = RangeInputDialog()
-        dialog.show()
-        longitude_scale, latitude_scale, time_scale = (0, 0), (0, 0), (0, 0)
-        if dialog.exec() == QDialog.Accepted:
-            longitude_scale, latitude_scale, time_scale = dialog.get_values()
-
-        nc_file_path, selected_filter = QFileDialog.getSaveFileName(
-            None, "保存文件", "data.nc", "NetCDF files (*.nc)"
-        )
-        if nc_file_path:
-            with Dataset(nc_file_path, 'w', format='NETCDF4') as ncfile:
-                time_dim = ncfile.createDimension('time', len(data))
-                space_dim = ncfile.createDimension('space', len(data.columns))
-
-                time_var = ncfile.createVariable('time', 'f4', ('time',))
-                space_var = ncfile.createVariable('space', 'f4', ('space',))
-                data_var = ncfile.createVariable('data_variable', 'f4', ('time', 'space'))
-
-                time_var[:] = data['time_column'].values
-                space_var[:] = data['space_column'].values
-                data_var[:, :] = data['data_variable'].values
-
-                time_var.units = 'seconds since 2023-05-01 00:00:00'
-                space_var.units = 'meters'
-                data_var.units = 'unknown'
-
     def timerEvent(self, event):
         self.play_next_image()
 
@@ -1158,13 +1115,13 @@ class MutiShowImage(ShowImage):
         super().resizeEvent(event)
         if self.image_types[0] == 'raster':
             self.resize_image_label()
-        elif self.image_type == 'svg':
+        elif self.image_types[0] == 'svg':
             self.resize_svg()
     def showEvent(self, event):
         super().showEvent(event)
         if self.image_types[0] == 'raster':
             self.resize_image_label()
-        elif self.image_type == 'svg':
+        elif self.image_types[0] == 'svg':
             self.resize_svg()
     def toggle_zoom_mode(self):
         if self.zoom_button.isChecked():
@@ -1179,7 +1136,8 @@ if __name__ == "__main__":
     from func import update_treeview,load_index_image,find_node_by_path
     import time
     app = QApplication(sys.argv)
-    images=[r'D:\source_python\Index_search\images00\1-1.png']*16
+    images=[r'D:\source_python\Index_search\images00\1-1.png']*3
+    images=[r'D:\source_python\Index_search\1.svg']*16
     # images,_=QFileDialog.getOpenFileNames(None, "Open file", 'c:\\', 'Image files(*.jpg *.gif *.png *.jpeg *.svg)')
     # print(images)
     # ShowImage(None,None).show_image(image_path=images[0])
@@ -1197,7 +1155,9 @@ if __name__ == "__main__":
     # print(item.data(0, Qt.UserRole) if item else None)
     # execution_time = end_time - start_time
     # print(f"函数执行时间: {execution_time} 秒")
-    MutiShowImage(None,None,images).show_images(images)
+    Ms=MutiShowImage(None,None,images)
+    Ms.check_names=['12345678']*16
+    Ms.show_images(images)
     sys.exit(app.exec_())
 
 #函数执行时间: 5.649999999945976e-05 秒，字典搜索

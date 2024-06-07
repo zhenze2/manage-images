@@ -1,6 +1,6 @@
 import pickle
 from PyQt5.QtWidgets import  QFileDialog, QMessageBox, QTreeWidgetItem,QTreeWidget
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt,QThread, pyqtSignal
 import copy
 import os
 import re
@@ -17,7 +17,10 @@ SEPARATOR = "_" # 默认分隔符
 NAME_SPACE=SEPARATOR+'空间分布图'
 NAME_TIME=SEPARATOR+'时间序列图'
 
-
+class NodeType:
+    CATEGORY = "category"
+    PHOTO = "photo"
+    FILE = "file"
 
 def chinese_to_arabic_sort(arr):
     chinese_numbers= {
@@ -48,51 +51,7 @@ def chinese_to_arabic_sort(arr):
                     arrb[l] = arrb[l].replace(j, str(chinese_numbers[j]))
         sorted_b = [x for _, x in sorted(zip(arrb, arr), key=lambda x:int(re.findall(r'\d+',x[0])[0]) if len(re.findall(r'\d+',x[0]))>0  else 999999999999)]
     return sorted_b
-def index_image_files(directory, image_format):  # 修改中文名称
-    index = {}  # 初始化索引字典
-    pattern = r'_\d{4}?'+image_format+'$' #判断是否为年份或者月份结尾，'_\d{4}(?:_\d{2})?'
-    # re.search(pattern, file)
-    # 索引了所在目录内包括子目录所有符合条件的文件
-    for root, dirs, files in os.walk(directory):
-        files = sorted(files)
-        for file in files:
-            if file.endswith(image_format):
-                if SEPARATOR not in file:
-                    # QMessageBox.information(None, "错误",str(file)+ "不符合规范格式: 类别1"+SEPARATOR+"类别2"+SEPARATOR+"..."+SEPARATOR+"类别n"+SEPARATOR+"图片名称\n例如: cat"+SEPARATOR+"dog"+SEPARATOR+"1" + DEFAULT_IMAGE_FORMAT)
-                    continue
-                # 增加时间空间标签
-                po=file.find(SEPARATOR)
-                if re.search(pattern, file):
-                    file=file[:po]+NAME_TIME+file[po:]
-                else:
-                    file=file[:po]+NAME_SPACE+file[po:]
-                
-                categories, filename = file.rsplit(SEPARATOR, maxsplit=1)
-                categories = categories.strip().split(SEPARATOR)
-                filename = filename.strip()
 
-                curr_index = index  
-                for category in categories:
-                    curr_index = curr_index.setdefault(category, {})
-
-                curr_index[filename] = os.path.join(root, file)
-    if index == {}:
-        QMessageBox.information(None, "错误", "未找到规范格式的图片文件")
-    save_index_image(index)
-    return index
-
-def save_index_image(index_image):
-    filename = os.path.join(Config.current_dir, r"conf\index_image.pkl")
-    with open(filename, 'wb') as f:
-        pickle.dump(index_image, f)
-
-
-def load_index_image(filename):
-    try:
-        with open(filename, 'rb') as f:
-            return pickle.load(f)
-    except FileNotFoundError:
-        return None
 def update_category_tree(tree, directory_to_index):
     if not directory_to_index:
         return
@@ -100,22 +59,6 @@ def update_category_tree(tree, directory_to_index):
     tree.clear()
     category_index = index_image_files(directory_to_index, DEFAULT_IMAGE_FORMAT)
     update_treeview(tree, tree, category_index)
-
-def browse_directory(entry_path,tree,image_path=None):
-    """
-    打开一个对话框，选择包含图像文件的目录。
-    """
-    if image_path:
-        directory_path=image_path
-        if entry_path:
-            entry_path.setText(directory_path)
-        update_category_tree(tree,directory_path)
-    else:
-        directory_path = QFileDialog.getExistingDirectory()
-        if directory_path:
-            if entry_path:
-                entry_path.setText(directory_path)
-            update_category_tree(tree,directory_path)
 
 def update_treeview(tree, parent, categories): # 修改中文名称
     """
@@ -284,10 +227,6 @@ def muti_search(entry_path, entry_date_search,index_dict,elements,tree,cate='A')
     if not directory_to_index:
         QMessageBox.critical(None, "错误", "请选择目录")
         return
-    # 检查是否输入了查询日期
-    if not search_filename:
-        QMessageBox.critical(None, "错误", "查询日期格式错误")
-        return
     # 检查是search_filename是否是日期
     if not re.match(r'\d{4}'+SEPARATOR+r'\d{2}'+SEPARATOR+r'\d{2}', search_filename):
         QMessageBox.critical(None, "错误", "查询日期格式错误")
@@ -301,7 +240,6 @@ def muti_search(entry_path, entry_date_search,index_dict,elements,tree,cate='A')
     result=[]
     end_name = search_filename + DEFAULT_IMAGE_FORMAT
     ids=end_name.split(SEPARATOR)
-
     ta_dic=[]   # 初始化复选框列表
     items=[]
     for start in dicts:
@@ -317,7 +255,6 @@ def muti_search(entry_path, entry_date_search,index_dict,elements,tree,cate='A')
                     result.append(item.data(0, Qt.UserRole)[1])
                     items.append(item)
             ta_dic.append(ta)
-
     return ta_dic,result,items
 
 def update_image_format(entry_image_format, tree,directory):
@@ -361,3 +298,66 @@ def find_node_by_path(tree, path):
             if item.text(0)==path[0]:
                 return find_node_recursive(item, path[1:])
     return None
+
+
+def save_index_image(index_image, directory):
+    filename = os.path.join(Config.current_dir, r"conf\index_image.pkl")
+    with open(filename, 'wb') as f:
+        pickle.dump(index_image, f)
+
+def load_index_image(directory):
+    filename = os.path.join(Config.current_dir, r"conf\index_image.pkl")
+    if not os.path.exists(filename):
+        return None
+    try:
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
+    except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+        return None
+
+class IndexingThread(QThread):
+    indexing_done = pyqtSignal(dict)
+
+    def __init__(self, directory, image_format, parent=None):
+        super().__init__(parent)
+        self.directory = directory
+        self.image_format = image_format
+
+    def run(self):
+        index = index_image_files(self.directory, self.image_format)
+        self.indexing_done.emit(index)
+def index_image_files(directory, image_format):
+    # index = load_index_image(directory)
+    # if index is not None:
+    #     return index
+    index = {}
+    pattern = r'_\d{4}?' + image_format + '$'
+
+    for root, dirs, files in os.walk(directory):
+        files = sorted(files)
+        for file in files:
+            if file.endswith(image_format):
+                if SEPARATOR not in file:
+                    continue
+                
+                po = file.find(SEPARATOR)
+                if re.search(pattern, file):
+                    file = file[:po] + NAME_TIME + file[po:]
+                else:
+                    file = file[:po] + NAME_SPACE + file[po:]
+
+                categories, filename = file.rsplit(SEPARATOR, maxsplit=1)
+                categories = categories.strip().split(SEPARATOR)
+                filename = filename.strip()
+
+                curr_index = index
+                for category in categories:
+                    curr_index = curr_index.setdefault(category, {})
+
+                curr_index[filename] = os.path.join(root, file)
+    
+    if not index:
+        QMessageBox.information(None, "错误", "未找到规范格式的图片文件")
+
+    save_index_image(index, directory)
+    return index

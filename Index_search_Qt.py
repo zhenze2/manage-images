@@ -166,7 +166,6 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.button_load_file,6,2)
 
         self.main_layout.addWidget(self.button_multi_image,7,2)
-        # self.main_layout.addWidget(checkbox_widget,8,0,1,3)
         self.main_layout.addWidget(self.muti_search,7,1)
         self.scroll_area.setFixedHeight(40)
         self.main_layout.addWidget(self.scroll_area,8,0,1,3)
@@ -190,49 +189,15 @@ class MainWindow(QMainWindow):
         self.image_format_commbox.activated[str].connect(self.update_image_format)
         self.sep.activated[str].connect(self.update_sep)
 
-        browse_directory(self.entry_path,self.tree,image_path=self.default_path)
+        self.browse_directory(self.default_path)
 
         INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
         # 从文件加载索引数据
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # 如果没有加载到数据，则重新索引并保存到文件
         self.data = INDEX_IMAGE
-        # 把字符串写入新文件,用utf-8编码
-        # with open ("index_image.txt",'w',encoding='utf-8') as f:
-        #     f.write(str(INDEX_IMAGE))
-        # self.clear_combos_layout()
-        # self.create_combos(self.data, 0)
-        # self.update_combos(0, 0)
-        # level=0
-        # if level < len(self.combos):
-        #     mxa_len, v_len = 0, 0
-        #     comboBox = self.combos[level]
-        #     for y in range(0, comboBox.count()):
-        #         v_len=comboBox.fontMetrics().width(comboBox.itemText(y))
-        #         if (mxa_len <= v_len): 
-        #             mxa_len = v_len
-        #     comboBox.view().setMinimumWidth(int(mxa_len+15))	# 设置自适应宽度
-        
-        # self.setWindowFlags(Qt.FramelessWindowHint)
-
-        # 添加菜单栏
-        # menubar=self.menuBar()
-        # # 创建帮助菜单
-        # help_menu = menubar.addMenu('帮助')
-        
-        # # 添加动作到帮助菜单
-        # help_action = QAction('查看帮助', self)
-        # help_action.triggered.connect(self.showHelp)
-        # help_menu.addAction(help_action)
         
 
-    # def showHelp(self):
-    #     help_text = """
-    #     <p>点击空格可自动播放图片</p>
-    #     <p>点击A键可以播放上一张图片</p>
-    #     <p>点击D键可以播放下一张图片</p>
-    #     """
-    #     QMessageBox.information(self, '帮助', help_text)
     def update_checkboxes(self,dicts):
         self.hide_last_level_options()
         level_wid=0
@@ -389,13 +354,25 @@ class MainWindow(QMainWindow):
             checkbox.deleteLater()
         self.checkboxes.clear()
         self.scroll_area.setFixedHeight(40)
-    def browse_directory(self):
-        browse_directory(self.entry_path,self.tree)
+
+    def browse_directory(self,image_path=None):
+        if image_path:
+            directory_path=image_path
+        else:
+            directory_path = QFileDialog.getExistingDirectory()
         INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
         # 从文件加载索引数据
         INDEX_IMAGE = load_index_image(INDEX_IMAGE_FILE)
         # 如果没有加载到数据，则重新索引并保存到文件
         self.data = INDEX_IMAGE
+        if directory_path:
+            self.entry_path.setText(directory_path)
+            self.indexing_thread = IndexingThread(directory_path, DEFAULT_IMAGE_FORMAT)
+            self.indexing_thread.indexing_done.connect(self.on_indexing_done)
+            self.indexing_thread.start()
+    def on_indexing_done(self, category_index):
+        self.tree.clear()
+        update_treeview(self.tree, self.tree, category_index)
 
     def search(self):
         search(self.tree, self.entry_path, selected_category, self.entry_filename, self.show_image)
@@ -462,26 +439,15 @@ class MainWindow(QMainWindow):
         for i in input_elements:
             if i not in elements and i!="":
                 elements.append(i)
-        # print(elements)
-        # 弹出弹窗选择输入种类
-        # import time
-        # start_time = time.perf_counter()
         dicts,self.paths,items = muti_search(self.entry_path,self.entry_muti_search,self.data,elements,self.tree,c)
         if dicts is None:
             return
-        # print(dicts,self.paths)
-        # end_time = time.perf_counter()
-        # execution_time = end_time - start_time
-        # print(f"函数执行时间: {execution_time} 秒")
-        # print(dicts,self.paths)
         if self.last_input != self.entry_muti_search.text():
             self.update_checkboxes(dicts)
         self.last_input=self.entry_muti_search.text()
         image_paths=[]
         for i in range(len(self.checkboxes)):
             if self.checkboxes[i].isChecked() and self.paths[i] is not None:
-                # print(self.checkboxes[i].text())
-                # print(image_paths[i])
                 image_paths.append(self.paths[i])
         c_name=[]
         for i in dicts:
@@ -492,35 +458,6 @@ class MainWindow(QMainWindow):
             multi_image_display.check_names=c_name
             multi_image_display.current_Nodes=items
             multi_image_display.show_images(image_paths)
-    # def getInputType(self):
-    #     menu = QMenu(self)
-    #     A = menu.addAction("A")
-    #     B = menu.addAction("B")
-
-    #     action = menu.exec_(self.mapToGlobal(self.sender().pos()))
-
-    #     if action == A:
-    #         return "A"
-    #     elif action == B:
-    #         return "B"
-    #     else:
-    #         return None
-    
-    # def getInputType(self):
-    #     dialog = QMessageBox()
-    #     dialog.setWindowTitle("选择输入类型")
-    #     dialog.setText("请选择要显示的图类:")
-    #     dialog.addButton("A", QMessageBox.YesRole)
-    #     dialog.addButton("B", QMessageBox.YesRole)
-    #     dialog.addButton("取消", QMessageBox.RejectRole)
-    #     result = dialog.exec_()
-
-    #     if result == 0:  # 用户选择了 "A"
-    #         return "A"
-    #     elif result == 1:  # 用户选择了 "B"
-    #         return "B"
-    #     else:  # 用户选择了 "取消" 或者关闭了对话框
-    #         return None
     def getInputType(self):
         items = ["A", "B"]
         item, ok = QInputDialog.getItem(self, " ", "请选择图类", items, editable=False)
@@ -532,6 +469,10 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    # import time
+    # start_time = time.perf_counter()
     window = MainWindow()
     window.show()
+    # end_time = time.perf_counter()
+    # print(end_time-start_time)
     sys.exit(app.exec_())
