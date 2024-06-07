@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea,QAction,QMessageBox,QMenu,QInputDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea,QAction,QMessageBox,QMenu,QInputDialog,QVBoxLayout
 from PyQt5.QtCore import Qt
 import sys
 import os
@@ -109,17 +109,15 @@ class MainWindow(QMainWindow):
         self.time_entry.setText("0.1")  # 默认时间间隔为0.1秒
         
         # 选中的类别
-        global selected_category
-        selected_category = QLabel("")
-        selected_category.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        selected_category.setAlignment(Qt.AlignCenter)
+        self.selected_category = QLabel("")
+        self.selected_category.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.selected_category.setAlignment(Qt.AlignCenter)
         
         # 可视化文件
         self.button_load_file = QPushButton("可视化")
         self.button_load_file.setToolTip('加载文件进行数据可视化')
         
         # 显示多张图片
-        # self.multi_show_images=QLineEdit()
         self.button_multi_image = QPushButton("显示多张图片")
 
         # 创建多图显示搜索栏标签和输入框
@@ -148,7 +146,7 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.entry_path,0,1)
         self.main_layout.addWidget(self.button_browse,0,2)
         self.main_layout.addWidget(self.tree,1,0,1,3)
-        self.main_layout.addWidget(selected_category,2,0,1,3)
+        self.main_layout.addWidget(self.selected_category,2,0,1,3)
         self.main_layout.addWidget(self.label_filename,3,0)
         self.main_layout.addWidget(self.entry_filename,3,1)
         self.main_layout.addWidget(self.button_search,3,2)
@@ -180,7 +178,6 @@ class MainWindow(QMainWindow):
         # 添加信号槽连接
         self.button_browse.clicked.connect(self.browse_directory) # 点击浏览按钮，选择文件夹
         self.button_search.clicked.connect(self.search) # 点击搜索按钮，搜索文件
-        # self.button_update_format.clicked.connect(self.update_image_format)# 点击更新按钮，更新图片格式
         self.button_global_search.clicked.connect(self.global_search) # 点击全局搜索按钮，全局搜索
         self.tree.itemClicked.connect(self.on_select)# 点击树形视图节点，选中节点
         self.tree.itemDoubleClicked.connect(self.doubel_click)# 双击树形视图节点，显示图片
@@ -378,7 +375,7 @@ class MainWindow(QMainWindow):
         self.tree.clear()
         QMessageBox.critical(self, "错误", message)
     def search(self):
-        search(self.tree, self.entry_path, selected_category, self.entry_filename, self.show_image)
+        search(self.tree, self.entry_path, self.selected_category, self.entry_filename, self.show_image)
     def update_image_format(self):
         update_image_format(self.image_format_commbox,self.tree,self.entry_path.text())
         INDEX_IMAGE_FILE = os.path.join(self.current_dir,PATH_INDEX)
@@ -401,7 +398,7 @@ class MainWindow(QMainWindow):
         global_search(self.tree,self.entry_path,self.entry_global_search,self.show_image)
 
     def on_select(self,item):
-        on_select(item,selected_category)
+        on_select(item,self.selected_category)
         self.select_node=item
     def show_image(self,path,Node):
         Simg=ShowImage(self.tree,self.time_entry)
@@ -425,11 +422,6 @@ class MainWindow(QMainWindow):
         # 显示消息框
         draw_window = DrawWindow()
         draw_window.draw_pic(file_path)
-    def closeEvent(self, event):
-        DrawWindow.close_all()
-        ShowImage.close_all()
-        MultiImageDisplay.close_all()
-        event.accept()
 
     def show_multi_images(self):
         c=self.getInputType()
@@ -470,6 +462,10 @@ class MainWindow(QMainWindow):
         else:
             return None
 
+    def closeEvent(self, event):
+        DrawWindow.close_all()
+        ShowImage.close_all()
+        event.accept()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
