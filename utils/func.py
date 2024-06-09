@@ -9,6 +9,7 @@ class CONFIG():
     def __init__(self):
         self.current_dir=None # 主文件所在目录
         self.ELEMENTS_TRANSLATION=None # 中文名称转换
+        self.index_file_path=None # 索引文件路径
 
 Config=CONFIG()
 # 初始文件格式
@@ -298,13 +299,13 @@ def find_node_by_path(tree, path):
     return None
 
 
-def save_index_image(index_image, directory):
-    filename = os.path.join(Config.current_dir, r"conf\index_image.pkl")
+def save_index_image(index_image, path=Config.index_file_path):
+    filename = path
     with open(filename, 'wb') as f:
         pickle.dump(index_image, f)
 
-def load_index_image(directory):
-    filename = os.path.join(Config.current_dir, r"conf\index_image.pkl")
+def load_index_image(path=Config.index_file_path):
+    filename = path
     if not os.path.exists(filename):
         return None
     try:
@@ -360,5 +361,5 @@ def index_image_files(directory, image_format):
     if not index:
         return {}
 
-    save_index_image(index, directory)
+    save_index_image(index, Config.index_file_path)
     return index
