@@ -1,6 +1,6 @@
 from math import ceil
 
-from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea
+from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox
 from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF
 from PyQt5.QtGui import QPixmap,QKeyEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
@@ -801,7 +801,8 @@ class MutiShowImage(ShowImage):
         checkbox_layout.setContentsMargins(0, 0, 0, 0)
         self.checkbox_layout = checkbox_layout
         step_scroll=QHBoxLayout()
-        self.step=QDoubleSpinBox()
+        # self.step=QDoubleSpinBox()
+        self.step=QSpinBox()
         self.step.setRange(1,100)
         step_scroll.addWidget(QLabel("步长"))
         step_scroll.addWidget(self.step)
