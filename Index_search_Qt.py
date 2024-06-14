@@ -189,7 +189,6 @@ class MainWindow(QMainWindow):
         self.browse_directory(self.default_path)
 
         self.data = load_index_image(Config.index_file_path)
-        
 
     def update_checkboxes(self, dicts):
         self.hide_last_level_options()
