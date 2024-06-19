@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea,QAction,QMessageBox,QMenu,QInputDialog,QVBoxLayout
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 import sys
 import os
 
@@ -50,7 +51,9 @@ class MainWindow(QMainWindow):
         self.last_level_options = [] 
         self.init_ui()
     def init_ui(self):
-        self.setWindowTitle("Image File Search")
+        self.setWindowTitle("北极海冰图集电子管理器")
+        # 设置图标
+        # self.setWindowIcon(QIcon(os.path.join(self.current_dir, 'icons', 'icon.png')))
         size=self.config_manager.get("window_size")
         self.resize(size[0],size[1])
 
