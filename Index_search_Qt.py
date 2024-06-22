@@ -105,6 +105,7 @@ class MainWindow(QMainWindow):
         self.button_global_search = QPushButton("全局搜索")
         self.button_global_search.setToolTip('在所有图片中进行搜索')
 
+
         # 创建时间间隔标签和输入框
         self.time_label = QLabel("播放速度(秒):")
         self.time_entry = QLineEdit()
