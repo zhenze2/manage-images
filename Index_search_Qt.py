@@ -7,7 +7,7 @@ import os
 from utils.func import *
 from conf.config import ConfigManager
 from utils.data_visual import DrawWindow
-from utils.ImageViewer import ShowImage,MultiImageDisplay,MutiShowImage
+from utils.ImageViewer import ShowImage,MutiShowImage
 
 PATH_INDEX=r"conf\index_image.pkl"
 PATH_CONFIG=r"conf\config.json"

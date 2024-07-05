@@ -1,10 +1,11 @@
 from math import ceil
 
-from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox
+from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox,QStatusBar,QApplication
 from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF
-from PyQt5.QtGui import QPixmap,QKeyEvent
+from PyQt5.QtGui import QPixmap,QKeyEvent, QMouseEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
-from netCDF4 import Dataset
+# from netCDF4 import Dataset
+import math
 import pandas as pd
 import os
 from utils.func import Config
@@ -38,6 +39,9 @@ class ShowImage(QMainWindow):
         main_layout.addWidget(self.graphics_view)
         main_layout.setAlignment(Qt.AlignCenter)
         
+        # 设置状态栏
+        self.status_bar = QStatusBar()
+        
         # 设置按钮
         button_layout = QHBoxLayout()
         self.prev_button = QPushButton("上一张")
@@ -51,7 +55,8 @@ class ShowImage(QMainWindow):
         self.next_button.setFixedHeight(25)
         button_layout.addWidget(self.prev_button)
         button_layout.addWidget(self.play_button)
-        button_layout.addWidget(self.local_button, alignment=Qt.AlignCenter)  # 设置复选框居中
+        button_layout.addWidget(self.local_button)  # 设置复选框居中
+        button_layout.addWidget(self.status_bar)
         button_layout.addWidget(self.next_button)
         
         # 将按钮放置在布局底部
@@ -91,6 +96,8 @@ class ShowImage(QMainWindow):
         export_action_nc.triggered.connect(self.save_nc)
         export_menu.addAction(export_action_nc)
         self.windows.append(self)
+        
+        self.setMouseTracking(True)
 
     def showHelp(self):
         help_text = """
@@ -111,6 +118,7 @@ class ShowImage(QMainWindow):
         else:
             self.image_type = 'raster'
             self.show_raster_image(image_path)
+        self.status_bar.showMessage(f"纬度: {0:.2f}  经度: {0:.2f}")
         self.show()
     def show_svg(self, svg_path):
         # 创建 QGraphicsScene 和 QGraphicsSvgItem
@@ -353,38 +361,80 @@ class ShowImage(QMainWindow):
                 data_var.long_name = 'Your Data Description'  # 数据描述
                 data_var.units = 'Your Data Units'  # 数据单位
 
+    def pixel_to_coords(self, x, y):
+        # 获取图像的中心
+        center_x = self.graphics_scene.width() / 2
+        center_y = self.graphics_scene.height() / 2
+
+        # 计算从中心到点 (x, y) 的距离（半径）
+        dx = x - center_x
+        dy = y - center_y
+        r = math.sqrt(dx**2 + dy**2)
+
+        # 计算角度
+        theta = math.atan2(dy, dx)
+
+        # 将 r 转换为纬度
+        # 这里假设图像的边缘是赤道（0度纬度），中心是北极（90度纬度）
+        max_radius = min(center_x, center_y)
+        latitude = 90 - (r / max_radius) * 90
+
+        # 将 theta 转换为经度
+        longitude = math.degrees(theta)
+        if longitude < 0:
+            longitude += 360
+
+        return latitude, longitude
     def eventFilter(self, obj, event):
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
         '''
         事件过滤器，处理鼠标滚轮事件和拖动事件，实现图片的放大缩小和拖动
         '''
         if self.graphics_view:
-            if obj == self.graphics_view.viewport() and event.type() == QEvent.Wheel:
-                # 获取鼠标在视图中的位置
-                mouse_pos_view = event.pos()
-                mouse_pos_scene = self.graphics_view.mapToScene(mouse_pos_view)
-                delta = event.angleDelta().y()
-                if delta > 0:
-                    scale_factor = self.zoom_factor
-                else:
-                    scale_factor = 1 / self.zoom_factor
-                # 设置放大缩小的锚点为鼠标位置
-                self.graphics_view.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-                self.graphics_view.scale(scale_factor, scale_factor)
-                self.graphics_view.setTransformationAnchor(QGraphicsView.NoAnchor)
-                return True
-            elif event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
-                # 处理鼠标左键按下事件进行拖动
-                self.last_mouse_pos = event.pos()
-                return True
-            elif event.type() == QEvent.MouseMove and event.buttons() & Qt.LeftButton:
-                # 处理鼠标拖动事件
-                delta = event.pos() - self.last_mouse_pos
-                self.last_mouse_pos = event.pos()
-                self.graphics_view.horizontalScrollBar().setValue(
-                    self.graphics_view.horizontalScrollBar().value() - delta.x())
-                self.graphics_view.verticalScrollBar().setValue(
-                    self.graphics_view.verticalScrollBar().value() - delta.y())
-                return True
+            if obj == self.graphics_view.viewport():
+                if event.type() == QEvent.Wheel:
+                    # logging.debug("Wheel event detected")
+                    # 获取鼠标在视图中的位置
+                    mouse_pos_view = event.pos()
+                    mouse_pos_scene = self.graphics_view.mapToScene(mouse_pos_view)
+                    delta = event.angleDelta().y()
+                    if delta > 0:
+                        scale_factor = self.zoom_factor
+                    else:
+                        scale_factor = 1 / self.zoom_factor
+                    # 设置放大缩小的锚点为鼠标位置
+                    self.graphics_view.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+                    self.graphics_view.scale(scale_factor, scale_factor)
+                    self.graphics_view.setTransformationAnchor(QGraphicsView.NoAnchor)
+                    return True
+                elif event.type() == QEvent.MouseMove:
+                    # logging.debug("Mouse move event detected")
+                    # 显示经纬度
+                    scene_coords = self.graphics_view.mapToScene(event.pos())
+                    x, y = scene_coords.x(), scene_coords.y()
+                    latitude, longitude = self.pixel_to_coords(x, y)
+                    self.status_bar.showMessage(f"纬度: {latitude:.2f}  经度: {longitude:.2f}")
+                    if event.buttons() & Qt.LeftButton:
+                        # logging.debug("Mouse drag event detected")
+                        # 处理鼠标拖动事件
+                        delta = event.pos() - self.last_mouse_pos
+                        self.last_mouse_pos = event.pos()
+                        self.graphics_view.horizontalScrollBar().setValue(
+                            self.graphics_view.horizontalScrollBar().value() - delta.x())
+                        self.graphics_view.verticalScrollBar().setValue(
+                            self.graphics_view.verticalScrollBar().value() - delta.y())
+                    return True
+                elif event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                    # logging.debug("Mouse button press event detected")
+                    # 处理鼠标左键按下事件进行拖动
+                    self.last_mouse_pos = event.pos()
+                    return True
+                elif event.type() == QEvent.Enter:
+                    # logging.debug("Mouse enter event detected")
+                    # 处理鼠标进入事件以确保能够正确处理MouseMove事件
+                    self.graphics_view.viewport().setMouseTracking(True)
+                    return True
         return super().eventFilter(obj, event)
     def timerEvent(self, event):
         # 自动播放下一张图片
@@ -425,209 +475,6 @@ class ShowImage(QMainWindow):
         # 静态方法，关闭所有窗口
         for window in cls.windows:
             window.close()
-
-
-class MultiImageDisplay(ShowImage):
-    def __init__(self):
-        super().__init__(None,None)
-        self.setWindowTitle("Multi Image Viewer")
-        self.image_widget=QWidget()
-        self.zoom_factor = 1.1
-        self.init_ui()
-
-    def init_ui(self):
-        self.main_layout = QVBoxLayout()
-        
-        # 添加一个按钮，用于显示新的图片
-        # add_image_button = QPushButton("Add Image")
-        # add_image_button.clicked.connect(self.add_image_widget)
-        # self.main_layout.addWidget(add_image_button)
-
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        # 创建一个 QGraphicsView 和 QGraphicsScene 用于显示图片
-        self.graphics_view = QGraphicsView()
-        self.graphics_scene = QGraphicsScene()
-        self.graphics_view.setScene(self.graphics_scene)
-        layout.addWidget(self.graphics_view)
-        self.image_widget.setLayout(layout)
-        self.main_layout.addWidget(self.image_widget)
-
-        central_widget = QWidget()
-        central_widget.setLayout(self.main_layout)
-        self.setCentralWidget(central_widget)
-        
-        self.graphics_view.viewport().installEventFilter(self)
-
-    def add_image_widget(self):
-        # 创建一个新的图片显示组件，并添加到窗口中
-        # image_widget = ImageWidget()
-        # self.image_layout.addWidget(image_widget)
-        # self.image_widgets.append(image_widget)
-        # image_paths = QFileDialog.getOpenFileNames(self, 'Open file', 'c:\\', 'Image files(*.jpg *.gif *.png *.jpeg *.svg)')
-        # 显示消息框
-    # def show_images(self, image_paths):
-    #     # 直接显示给定的多张图片
-    #     for index, image_path in enumerate(image_paths):
-    #         if index < len(self.image_widgets):
-    #             self.image_widgets[index].show_image(image_path)
-    #         else:
-    #             image_widget = ImageWidget()
-    #             self.image_layout.addWidget(image_widget)
-    #             image_widget.show_image(image_path)
-    #             # image_widget.setContentsMargins(0, 0, 0, 0)
-    #             self.image_widgets.append(image_widget)
-        QMessageBox.information(self, '消息', '新增')
-
-    def show_images(self, image_path):
-        # 直接显示给定的多张相同格式图片
-        self.image_path = image_path
-        if len(image_path)==0:
-            QMessageBox.information(self, '消息', '未找到图片')
-            return
-        if image_path[0].lower().endswith('.svg'):
-            self.image_type = 'svg'
-            self.show_svg(image_path)
-        else:
-            self.image_type = 'raster'
-            self.show_raster_image(image_path)
-        self.show()
-        self.image_widget.show()
-
-    def show_svg(self, svg_path):
-        # 加载svg图片
-        self.svgs=[]
-        for path in svg_path:
-            self.svgs.append(path)
-        self.graphics_view.setScene(self.graphics_scene)
-        self.resize_svg()
-    def resize_svg(self):
-        self.graphics_scene.clear()
-        width = 0
-        height = 0
-        n=len(self.svgs)
-        num_images_per_row = self.optimal_images_per_row(n,QSvgRenderer(self.svgs[0]).viewBox().width(),QSvgRenderer(self.svgs[0]).viewBox().height(),self.geometry().width()/self.geometry().height())
-        max_width = 0
-        max_height = 0
-        for i in range(n):
-            svg=QSvgRenderer(self.svgs[i])
-            if i % num_images_per_row == 0:
-                width = 0
-                height += svg.viewBoxF().height()
-            max_height = max(max_height, height)
-            
-            svg_item = QGraphicsSvgItem(self.svgs[i])
-            svg_item.setPos(width, height-svg.viewBoxF().height())
-            self.graphics_scene.addItem(svg_item)
-            
-            width += svg.viewBoxF().width()
-            max_width = max(max_width, width)
-        self.graphics_scene.setSceneRect(QRectF(0,0,max_width,max_height))
-        self.graphics_view.fitInView(self.graphics_scene.sceneRect(), Qt.KeepAspectRatio)
-        self.graphics_view.show()
-    def show_raster_image(self, image_path):
-        # 加载png等普通图片
-        self.pixmaps=[]
-        for path in image_path:
-            self.pixmaps.append(QPixmap(path))
-        self.graphics_view.setScene(self.graphics_scene)
-        # 统一所有图片的大小
-        max_width = min([pixmap.width() for pixmap in self.pixmaps])
-        max_height = min([pixmap.height() for pixmap in self.pixmaps])
-        for i in range(len(self.pixmaps)):
-            self.pixmaps[i] = self.pixmaps[i].scaled(max_width, max_height)
-        self.resize_image_label()
-
-    def resize_image_label(self):
-        self.graphics_scene.clear()
-        width = 0
-        height = 0
-        n=len(self.pixmaps)
-        num_images_per_row = self.optimal_images_per_row(n,self.pixmaps[0].width(),self.pixmaps[0].height(),ratio=self.geometry().width()/self.geometry().height())
-        max_width = 0
-        max_height = 0
-        for i in range(n):
-            pixmap =self.pixmaps[i]
-            if i % num_images_per_row == 0:
-                width = 0
-                height += pixmap.height()
-            max_height = max(max_height, height)
-            
-            pixmap_item = QGraphicsPixmapItem(pixmap)
-            pixmap_item.setPos(width, height-pixmap.height())
-            pixmap_item.setTransformationMode(Qt.SmoothTransformation)
-            self.graphics_scene.addItem(pixmap_item)
-            
-            width += pixmap.width()
-            max_width = max(max_width, width)
-        self.graphics_scene.setSceneRect(QRectF(0,0,max_width,max_height))
-        self.graphics_view.fitInView(self.graphics_scene.sceneRect(), Qt.KeepAspectRatio)
-        self.graphics_view.show()
-
-    def eventFilter(self, obj, event):
-        '''
-        事件过滤器，处理鼠标滚轮事件和拖动事件，实现图片的放大缩小和拖动
-        '''
-        if obj == self.graphics_view.viewport() and event.type() == QEvent.Wheel:
-            # 获取鼠标在视图中的位置
-            mouse_pos_view = event.pos()
-            mouse_pos_scene = self.graphics_view.mapToScene(mouse_pos_view)
-            delta = event.angleDelta().y()
-            if delta > 0:
-                scale_factor = self.zoom_factor
-            else:
-                scale_factor = 1 / self.zoom_factor
-            # 设置放大缩小的锚点为鼠标位置
-            self.graphics_view.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-            self.graphics_view.scale(scale_factor, scale_factor)
-            self.graphics_view.setTransformationAnchor(QGraphicsView.NoAnchor)
-            return True
-        elif event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
-            # 处理鼠标左键按下事件进行拖动
-            self.last_mouse_pos = event.pos()
-            return True
-        elif event.type() == QEvent.MouseMove and event.buttons() & Qt.LeftButton:
-            # 处理鼠标拖动事件
-            delta = event.pos() - self.last_mouse_pos
-            self.last_mouse_pos = event.pos()
-            self.graphics_view.horizontalScrollBar().setValue(
-                self.graphics_view.horizontalScrollBar().value() - delta.x())
-            self.graphics_view.verticalScrollBar().setValue(
-                self.graphics_view.verticalScrollBar().value() - delta.y())
-            return True
-        return super().eventFilter(obj, event)
-
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        if self.image_type == 'raster':
-            self.resize_image_label()
-        elif self.image_type == 'svg':
-            self.resize_svg()
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        # print(self.geometry().width(),self.geometry().height())
-        if self.image_type == 'raster':
-            self.resize_image_label()
-        elif self.image_type == 'svg':
-            self.resize_svg()
-    
-    @staticmethod
-    def optimal_images_per_row(n,width=100,height=100,ratio=800/600):
-        # Find the square root of the number of images to get an initial estimate
-        sqrt_n = int(n ** 0.5)
-        if sqrt_n == n**2:
-            return sqrt_n
-        num1 = sqrt_n
-        num2 = sqrt_n+1
-        
-        num1_ratio = (num1*width)/(height*ceil(n/num1))
-        num2_ratio = (num2*width)/(height*ceil(n/num2))
-        if abs(num1_ratio-ratio) < abs(num2_ratio-ratio):
-            return num1
-        else:
-            return num2
-
 
 
 class RangeInputDialog(QDialog):
