@@ -1,10 +1,10 @@
 from math import ceil
 
-from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox,QStatusBar,QApplication
+from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox,QStatusBar,QApplication,QSpacerItem, QSizePolicy
 from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF
 from PyQt5.QtGui import QPixmap,QKeyEvent, QMouseEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
-# from netCDF4 import Dataset
+from netCDF4 import Dataset
 import math
 import pandas as pd
 import os
@@ -53,9 +53,10 @@ class ShowImage(QMainWindow):
         self.local_button.setFixedHeight(25)
         self.local_button.setChecked(False)        
         self.next_button.setFixedHeight(25)
+        self.status_bar.setFixedWidth(210)
         button_layout.addWidget(self.prev_button)
         button_layout.addWidget(self.play_button)
-        button_layout.addWidget(self.local_button)  # 设置复选框居中
+        button_layout.addWidget(self.local_button)
         button_layout.addWidget(self.status_bar)
         button_layout.addWidget(self.next_button)
         
@@ -118,7 +119,7 @@ class ShowImage(QMainWindow):
         else:
             self.image_type = 'raster'
             self.show_raster_image(image_path)
-        self.status_bar.showMessage(f"纬度: {0:.2f}  经度: {0:.2f}")
+        self.status_bar.showMessage(f"纬度: {0:.2f}\u00B0  经度: {0:.2f}\u00B0")
         self.show()
     def show_svg(self, svg_path):
         # 创建 QGraphicsScene 和 QGraphicsSvgItem
@@ -326,42 +327,46 @@ class ShowImage(QMainWindow):
 
     def save_nc(self):
         # 读取CSV文件
-        path = os.path.join(Config.current_dir,"1.xlsx")
-        data = pd.read_excel(path)
-        dialog=RangeInputDialog()
-        dialog.show()
-        longitude_scale, latitude_scale, time_scale=(0,0),(0,0),(0,0)
-        if dialog.exec() == QDialog.Accepted:
-            longitude_scale, latitude_scale, time_scale = dialog.get_values()
-        elif dialog.exec() == QDialog.Rejected:
-            return
-        nc_name=f'{time_scale}_{latitude_scale}_{longitude_scale}.nc'
-        nc_file,_ = QFileDialog.getSaveFileName(None, "Save Nc File", nc_name, "NETCDF4 文件 (*.nc)")
+        # path = os.path.join(Config.current_dir,"1.xlsx")
+        # data = pd.read_excel(path)
+        # dialog=RangeInputDialog()
+        # dialog.show()
+        # longitude_scale, latitude_scale, time_scale=(0,0),(0,0),(0,0)
+        # if dialog.exec() == QDialog.Accepted:
+        #     longitude_scale, latitude_scale, time_scale = dialog.get_values()
+        # elif dialog.exec() == QDialog.Rejected:
+        #     return
+        # nc_name=f'{time_scale}_{latitude_scale}_{longitude_scale}.nc'
+        # nc_file,_ = QFileDialog.getSaveFileName(None, "Save Nc File", nc_name, "NETCDF4 文件 (*.nc)")
         # 创建NetCDF文件
-        if nc_file:
-            with Dataset(nc_file, 'w', format='NETCDF4') as nc:
-                # 定义维度，例如时间（time）和空间（space）
-                time_dim = nc.createDimension('time', len(data['time_column']))  # 替换'time_column'为你的实际时间列名
-                space_dim = nc.createDimension('space', len(data['space_column']))  # 替换'space_column'为你的实际空间列名
+        # if nc_file:
+        #     with Dataset(nc_file, 'w', format='NETCDF4') as nc:
+        #         # 定义维度，例如时间（time）和空间（space）
+        #         time_dim = nc.createDimension('time', len(data['time_column']))  # 替换'time_column'为你的实际时间列名
+        #         space_dim = nc.createDimension('space', len(data['space_column']))  # 替换'space_column'为你的实际空间列名
 
-                # 创建变量
-                time_var = nc.createVariable('time', 'f8', ('time',))  # 时间变量
-                space_var = nc.createVariable('space', 'i4', ('space',))  # 空间变量
-                data_var = nc.createVariable('data_variable', 'f8', ('time', 'space'))  # 你的数据变量
+        #         # 创建变量
+        #         time_var = nc.createVariable('time', 'f8', ('time',))  # 时间变量
+        #         space_var = nc.createVariable('space', 'i4', ('space',))  # 空间变量
+        #         data_var = nc.createVariable('data_variable', 'f8', ('time', 'space'))  # 你的数据变量
 
-                # 将数据填充到变量中
-                time_var[:] = data['time_column'].values  # 用实际时间数据填充
-                space_var[:] = data['space_column'].values  # 用实际空间数据填充
-                data_var[:] = data['your_data_column'].values.reshape(-1, len(data['space_column']))  # 用你的数据填充，确保数据形状正确
+        #         # 将数据填充到变量中
+        #         time_var[:] = data['time_column'].values  # 用实际时间数据填充
+        #         space_var[:] = data['space_column'].values  # 用实际空间数据填充
+        #         data_var[:] = data['your_data_column'].values.reshape(-1, len(data['space_column']))  # 用你的数据填充，确保数据形状正确
 
-                # 设置变量属性
-                time_var.long_name = 'Time'  # 变量描述
-                time_var.units = 'seconds since 1970-01-01 00:00:00'  # 单位
-                space_var.long_name = 'Space'  # 变量描述
-                data_var.long_name = 'Your Data Description'  # 数据描述
-                data_var.units = 'Your Data Units'  # 数据单位
+        #         # 设置变量属性
+        #         time_var.long_name = 'Time'  # 变量描述
+        #         time_var.units = 'seconds since 1970-01-01 00:00:00'  # 单位
+        #         space_var.long_name = 'Space'  # 变量描述
+        #         data_var.long_name = 'Your Data Description'  # 数据描述
+        #         data_var.units = 'Your Data Units'  # 数据单位
+        # options = QFileDialog.Options()
+        # options |= QFileDialog.DontUseNativeDialog  # 避免使用本地对话框以便更好地与PyQt5集成
+        out_path, selected_filter = QFileDialog.getSaveFileName(None, "Save OriginFile", "", "源文件 (*)")
+        print(out_path)
 
-    def pixel_to_coords(self, x, y):
+    def pixel_to_coords(self, x, y,edge_latitude=45):
         # 获取图像的中心
         center_x = self.graphics_scene.width() / 2
         center_y = self.graphics_scene.height() / 2
@@ -375,9 +380,10 @@ class ShowImage(QMainWindow):
         theta = math.atan2(dy, dx)
 
         # 将 r 转换为纬度
-        # 这里假设图像的边缘是赤道（0度纬度），中心是北极（90度纬度）
+        # 这里假设图像的边缘是 edge_latitude 纬度，中心是北极（90度纬度）
         max_radius = min(center_x, center_y)
-        latitude = 90 - (r / max_radius) * 90
+        latitude_range = 90 - edge_latitude
+        latitude = 90 - (r / max_radius) * latitude_range
 
         # 将 theta 转换为经度
         longitude = math.degrees(theta)
@@ -414,7 +420,7 @@ class ShowImage(QMainWindow):
                     scene_coords = self.graphics_view.mapToScene(event.pos())
                     x, y = scene_coords.x(), scene_coords.y()
                     latitude, longitude = self.pixel_to_coords(x, y)
-                    self.status_bar.showMessage(f"纬度: {latitude:.2f}  经度: {longitude:.2f}")
+                    self.status_bar.showMessage(f"纬度: {latitude:.2f}\u00B0  经度: {longitude:.2f}\u00B0")
                     if event.buttons() & Qt.LeftButton:
                         # logging.debug("Mouse drag event detected")
                         # 处理鼠标拖动事件
