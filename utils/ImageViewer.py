@@ -312,7 +312,9 @@ class ShowImage(QMainWindow):
 
     def save_pixmap(self):
         if self.pixmap:
-            out_path, selected_filter = QFileDialog.getSaveFileName(None, "Save Image", self.image_name, "JPEG 文件 (*.jpg);;PNG 文件 (*.png);;BMP 文件 (*.bmp)")
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog  # 避免使用本地对话框以便更好地与PyQt5集成
+            out_path, selected_filter = QFileDialog.getSaveFileName(None, "保存图片", self.image_name, "JPEG 文件 (*.jpg);;PNG 文件 (*.png);;BMP 文件 (*.bmp)",options=options)
             format_str = "JPG"
             # 根据所选过滤器确定文件扩展名
             if "JPEG" in selected_filter:

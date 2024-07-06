@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea,QAction,QMessageBox,QMenu,QInputDialog,QVBoxLayout
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt,QTranslator, QLocale, QLibraryInfo
+from PyQt5.QtGui import QIcon,QFont
 import sys
 import os
 
@@ -447,10 +447,12 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    # import time
-    # start_time = time.perf_counter()
+    font = QFont("微软雅黑", 10)
+    app.setFont(font)
+    # 加载中文翻译
+    translator = QTranslator()
+    if translator.load(QLocale.system(), "qt", "_", QLibraryInfo.location(QLibraryInfo.TranslationsPath)):
+        app.installTranslator(translator)
     window = MainWindow()
     window.show()
-    # end_time = time.perf_counter()
-    # print(end_time-start_time)
     sys.exit(app.exec_())
