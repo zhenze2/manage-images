@@ -328,26 +328,28 @@ class ShowImage(QMainWindow):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog  # 避免使用本地对话框以便更好地与PyQt5集成
         target_dir_path = QFileDialog.getExistingDirectory(self, "选择保存目录",options=options)
-        ex=self.image_path.split('.')[-1]
-        source_file_path = self.image_path.repalce(ex,'')
-        source_file_extension = ['jpg','png']
-        for ext in source_file_extension:
-            source_file_path=source_file_path+'.'+ext
-            if os.path.exists(source_file_path):
-                source_file_extension=ext
-                break
-        file_name=self.image_name+'.'+source_file_extension
-        if target_dir_path:
+        img_dir=os.path.dirname(self.image_path)
+        img_name=os.path.basename(self.image_path)
+        name=os.path.splitext(img_name)[0]
+        name=name.replace('_A','')
+        name=name.replace('_B','')
+        img_dir=img_dir.replace('_A','')
+        img_dir=img_dir.replace('_B','')
+        extensions = ['.nc','.csv','.dat']
+        ext='.nc'
+        source_file_path=os.path.join(img_dir.replace("images","data"),name+ext)
+        # print(source_file_path)
+        if os.path.exists(source_file_path):
             try:
                 # 构造目标文件的完整路径
-                target_file_path = os.path.join(target_dir_path, file_name)
+                target_file_path = os.path.join(target_dir_path, name+ext)
                 # 复制文件到目标路径
                 shutil.copy(source_file_path, target_file_path)
                 # self.status_bar.showMessage(f"文件已成功导出到: {target_dir_path}", 5000)
             except Exception as e:
                 pass
-                # self.status_bar.showMessage(f"导出文件失败: {str(e)}", 5000)
-        # print(target_dir_path)
+                self.status_bar.showMessage(f"导出文件失败: {str(e)}", 5000)
+
 
     def pixel_to_coords(self, x, y,edge_latitude=45):
         # 获取图像的中心
