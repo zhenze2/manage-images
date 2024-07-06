@@ -13,7 +13,7 @@ class CONFIG():
 
 Config=CONFIG()
 # 初始文件格式
-DEFAULT_IMAGE_FORMAT = ".png" #[".jpg", ".jpeg", ".png"]
+DEFAULT_IMAGE_FORMAT = ".jpg" #[".jpg", ".jpeg", ".png"]
 SEPARATOR = "_" # 默认分隔符
 NAME_SPACE=SEPARATOR+'空间分布图'
 NAME_TIME=SEPARATOR+'时间序列图'

@@ -317,26 +317,26 @@ class MainWindow(QMainWindow):
     #     else:
     #         return 0
 
-    def show_last_level_options(self):
-        self.hide_last_level_options()
-        l_level=-1
-        combo = self.combos[l_level]
-        while combo.count()==1:
-            l_level=l_level-1
-            combo = self.combos[l_level]
-        # if DEFAULT_IMAGE_FORMAT not in combo.itemText(1):
-        #     return
-        self.last_level_options.clear()
-        for i in range(1,combo.count()):
-            if DEFAULT_IMAGE_FORMAT in combo.itemText(i):
-                self.last_level_options.append(combo.itemText(i))
-        for option in self.last_level_options:
-            checkbox = QCheckBox(option)
-            checkbox.setChecked(True)
-            checkbox.setProperty("path", option)
-            # print(checkbox.text())
-            self.checkbox_layout.addWidget(checkbox)
-            self.checkboxes.append(checkbox)
+    # def show_last_level_options(self):
+    #     self.hide_last_level_options()
+    #     l_level=-1
+    #     combo = self.combos[l_level]
+    #     while combo.count()==1:
+    #         l_level=l_level-1
+    #         combo = self.combos[l_level]
+    #     # if DEFAULT_IMAGE_FORMAT not in combo.itemText(1):
+    #     #     return
+    #     self.last_level_options.clear()
+    #     for i in range(1,combo.count()):
+    #         if DEFAULT_IMAGE_FORMAT in combo.itemText(i):
+    #             self.last_level_options.append(combo.itemText(i))
+    #     for option in self.last_level_options:
+    #         checkbox = QCheckBox(option)
+    #         checkbox.setChecked(True)
+    #         checkbox.setProperty("path", option)
+    #         # print(checkbox.text())
+    #         self.checkbox_layout.addWidget(checkbox)
+    #         self.checkboxes.append(checkbox)
 
 
     def hide_last_level_options(self):
@@ -353,10 +353,13 @@ class MainWindow(QMainWindow):
             self.indexing_thread.indexing_done.connect(self.on_indexing_done)
             self.indexing_thread.error_signal.connect(self.on_error)
             self.indexing_thread.start()
-        self.data = load_index_image(Config.index_file_path)
     def on_indexing_done(self, category_index):
         self.tree.clear()
         update_treeview(self.tree, self.tree, category_index)
+        self.data = load_index_image(Config.index_file_path)
+        # with open("assets/a.txt","w",encoding='utf-8') as f:
+            # f.write(str(self.data))
+        # print(self.data.keys())
     def on_error(self, message):
         self.tree.clear()
         QMessageBox.critical(self, "错误", message)

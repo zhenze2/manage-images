@@ -21,3 +21,5 @@ Test.nc
 Extra_Todo/*
 conf/index_image.pkl
 requirements.txt
+final_figure/*
+data/*

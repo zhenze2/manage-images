@@ -1,11 +1,10 @@
-from math import ceil
-
-from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox,QStatusBar,QApplication,QSpacerItem, QSizePolicy
+import shutil
+import math
+from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox,QStatusBar,QApplication
 from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF
-from PyQt5.QtGui import QPixmap,QKeyEvent, QMouseEvent
+from PyQt5.QtGui import QPixmap,QKeyEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
 from netCDF4 import Dataset
-import math
 import pandas as pd
 import os
 from utils.func import Config
@@ -326,45 +325,29 @@ class ShowImage(QMainWindow):
                 self.pixmap.save(out_path, format_str, quality=100)
 
     def save_nc(self):
-        # 读取CSV文件
-        # path = os.path.join(Config.current_dir,"1.xlsx")
-        # data = pd.read_excel(path)
-        # dialog=RangeInputDialog()
-        # dialog.show()
-        # longitude_scale, latitude_scale, time_scale=(0,0),(0,0),(0,0)
-        # if dialog.exec() == QDialog.Accepted:
-        #     longitude_scale, latitude_scale, time_scale = dialog.get_values()
-        # elif dialog.exec() == QDialog.Rejected:
-        #     return
-        # nc_name=f'{time_scale}_{latitude_scale}_{longitude_scale}.nc'
-        # nc_file,_ = QFileDialog.getSaveFileName(None, "Save Nc File", nc_name, "NETCDF4 文件 (*.nc)")
-        # 创建NetCDF文件
-        # if nc_file:
-        #     with Dataset(nc_file, 'w', format='NETCDF4') as nc:
-        #         # 定义维度，例如时间（time）和空间（space）
-        #         time_dim = nc.createDimension('time', len(data['time_column']))  # 替换'time_column'为你的实际时间列名
-        #         space_dim = nc.createDimension('space', len(data['space_column']))  # 替换'space_column'为你的实际空间列名
-
-        #         # 创建变量
-        #         time_var = nc.createVariable('time', 'f8', ('time',))  # 时间变量
-        #         space_var = nc.createVariable('space', 'i4', ('space',))  # 空间变量
-        #         data_var = nc.createVariable('data_variable', 'f8', ('time', 'space'))  # 你的数据变量
-
-        #         # 将数据填充到变量中
-        #         time_var[:] = data['time_column'].values  # 用实际时间数据填充
-        #         space_var[:] = data['space_column'].values  # 用实际空间数据填充
-        #         data_var[:] = data['your_data_column'].values.reshape(-1, len(data['space_column']))  # 用你的数据填充，确保数据形状正确
-
-        #         # 设置变量属性
-        #         time_var.long_name = 'Time'  # 变量描述
-        #         time_var.units = 'seconds since 1970-01-01 00:00:00'  # 单位
-        #         space_var.long_name = 'Space'  # 变量描述
-        #         data_var.long_name = 'Your Data Description'  # 数据描述
-        #         data_var.units = 'Your Data Units'  # 数据单位
-        # options = QFileDialog.Options()
-        # options |= QFileDialog.DontUseNativeDialog  # 避免使用本地对话框以便更好地与PyQt5集成
-        out_path, selected_filter = QFileDialog.getSaveFileName(None, "Save OriginFile", "", "源文件 (*)")
-        print(out_path)
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog  # 避免使用本地对话框以便更好地与PyQt5集成
+        target_dir_path = QFileDialog.getExistingDirectory(self, "选择保存目录",options=options)
+        ex=self.image_path.split('.')[-1]
+        source_file_path = self.image_path.repalce(ex,'')
+        source_file_extension = ['jpg','png']
+        for ext in source_file_extension:
+            source_file_path=source_file_path+'.'+ext
+            if os.path.exists(source_file_path):
+                source_file_extension=ext
+                break
+        file_name=self.image_name+'.'+source_file_extension
+        if target_dir_path:
+            try:
+                # 构造目标文件的完整路径
+                target_file_path = os.path.join(target_dir_path, file_name)
+                # 复制文件到目标路径
+                shutil.copy(source_file_path, target_file_path)
+                # self.status_bar.showMessage(f"文件已成功导出到: {target_dir_path}", 5000)
+            except Exception as e:
+                pass
+                # self.status_bar.showMessage(f"导出文件失败: {str(e)}", 5000)
+        # print(target_dir_path)
 
     def pixel_to_coords(self, x, y,edge_latitude=45):
         # 获取图像的中心
