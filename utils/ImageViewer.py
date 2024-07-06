@@ -8,6 +8,9 @@ from netCDF4 import Dataset
 import pandas as pd
 import os
 from utils.func import Config
+import cv2
+import numpy as np
+import re
 
 class ShowImage(QMainWindow):
     windows=[]
@@ -25,6 +28,7 @@ class ShowImage(QMainWindow):
         self.zoom_factor = 1.1
         self.re_current_local=False
         self.image_type = None
+        self.get_circle=False
         self.initUI()
     def initUI(self):
         self.setWindowTitle("Image Viewer")
@@ -52,7 +56,7 @@ class ShowImage(QMainWindow):
         self.local_button.setFixedHeight(25)
         self.local_button.setChecked(False)        
         self.next_button.setFixedHeight(25)
-        self.status_bar.setFixedWidth(210)
+        self.status_bar.setFixedWidth(250)
         button_layout.addWidget(self.prev_button)
         button_layout.addWidget(self.play_button)
         button_layout.addWidget(self.local_button)
@@ -118,8 +122,18 @@ class ShowImage(QMainWindow):
         else:
             self.image_type = 'raster'
             self.show_raster_image(image_path)
-        self.status_bar.showMessage(f"纬度: {0:.2f}\u00B0  经度: {0:.2f}\u00B0")
+        self.status_bar.showMessage(f"纬度: N{0:.2f}\u00B0  经度: {0:.2f}\u00B0")
         self.show()
+        if self.get_circle:
+            self.centerx,self.centery,self.radius=self.detect_circle()
+        else:
+            self.centerx,self.centery,self.radius=-1,-1,-1
+        pattern = r'_\d{4}?'+'$'
+        name=os.path.splitext(self.image_name)[0]
+        if re.search(pattern, name):
+            self.time_pic=True
+        else:
+            self.time_pic=False
     def show_svg(self, svg_path):
         # 创建 QGraphicsScene 和 QGraphicsSvgItem
         self.graphics_scene = QGraphicsScene()
@@ -353,37 +367,60 @@ class ShowImage(QMainWindow):
                 self.status_bar.showMessage(f"导出文件失败: {str(e)}", 5000)
 
 
+    def detect_circle(self):
+        # 读取并缩小图片尺寸
+        image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
+        image = cv2.equalizeHist(image)
+        resized_image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)  # 缩小一半
+        # 应用高斯模糊以减少噪点
+        blurred = cv2.GaussianBlur(resized_image, (3, 3), 0)
+        # 使用霍夫圆检测来找到图片中的圆
+        circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, minDist=100, param1=50, param2=30, minRadius=50, maxRadius=0)
+        if circles is not None:
+            circles = np.uint16(np.around(circles))
+            for i in circles[0, :]:
+                # 获取圆心坐标和半径，并放大至原图尺寸
+                center_x = int(i[0] * 2)
+                center_y = int(i[1] * 2)
+                radius = int(i[2] * 2)
+                return center_x, center_y, radius
+        return None, None, None
     def pixel_to_coords(self, x, y,edge_latitude=45):
         # 获取图像的中心
-        center_x = self.graphics_scene.width() / 2
-        center_y = self.graphics_scene.height() / 2
+        if self.get_circle:
+            center_x, center_y, radius = self.centerx,self.centery,self.radius
+        else:
+            center_x = self.graphics_scene.width() / 2
+            center_y = self.graphics_scene.height() / 2
+            radius = min(center_x, center_y)
 
         # 计算从中心到点 (x, y) 的距离（半径）
         dx = x - center_x
         dy = y - center_y
         r = math.sqrt(dx**2 + dy**2)
-
         # 计算角度
         theta = math.atan2(dy, dx)
-
         # 将 r 转换为纬度
         # 这里假设图像的边缘是 edge_latitude 纬度，中心是北极（90度纬度）
-        max_radius = min(center_x, center_y)
+        if r > radius:
+            return 0,0
         latitude_range = 90 - edge_latitude
-        latitude = 90 - (r / max_radius) * latitude_range
+        latitude = 90 - (r / radius) * latitude_range
 
         # 将 theta 转换为经度
         longitude = math.degrees(theta)
-        if longitude < 0:
-            longitude += 360
+        if longitude!=-90:
+            longitude = (longitude + 90)%180
+        else:
+            longitude = 180
 
         return latitude, longitude
     def eventFilter(self, obj, event):
-        import logging
-        logging.basicConfig(level=logging.DEBUG)
         '''
         事件过滤器，处理鼠标滚轮事件和拖动事件，实现图片的放大缩小和拖动
         '''
+        # import logging
+        # logging.basicConfig(level=logging.DEBUG)
         if self.graphics_view:
             if obj == self.graphics_view.viewport():
                 if event.type() == QEvent.Wheel:
@@ -404,10 +441,15 @@ class ShowImage(QMainWindow):
                 elif event.type() == QEvent.MouseMove:
                     # logging.debug("Mouse move event detected")
                     # 显示经纬度
-                    scene_coords = self.graphics_view.mapToScene(event.pos())
-                    x, y = scene_coords.x(), scene_coords.y()
-                    latitude, longitude = self.pixel_to_coords(x, y)
-                    self.status_bar.showMessage(f"纬度: {latitude:.2f}\u00B0  经度: {longitude:.2f}\u00B0")
+                    if not self.time_pic:
+                        scene_coords = self.graphics_view.mapToScene(event.pos())
+                        x, y = scene_coords.x(), scene_coords.y()
+                        latitude, longitude = self.pixel_to_coords(x, y)
+                        msg=f"纬度: N{latitude:.2f}\u00B0  经度: E{longitude:.2f}\u00B0" if longitude>0 else f"纬度: N{latitude:.2f}\u00B0  经度: W{abs(longitude):.2f}\u00B0"
+                        if longitude==0 or longitude==180:
+                            msg=f"纬度: N{latitude:.2f}\u00B0  经度: {longitude:.2f}\u00B0"
+                        self.status_bar.showMessage(msg)
+                        
                     if event.buttons() & Qt.LeftButton:
                         # logging.debug("Mouse drag event detected")
                         # 处理鼠标拖动事件
