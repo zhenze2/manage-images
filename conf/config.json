@@ -6,12 +6,11 @@
         600
     ],
     "image_formats": [
-        ".png",
         ".jpg",
+        ".png",
         ".svg",
         ".jpeg",
         ".bmp",
-        ".gif",
         ".tiff"
     ],
     "default_path": "images",

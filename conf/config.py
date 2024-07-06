@@ -4,7 +4,7 @@ import os
 # 默认配置
 DEFAULT_CONFIG = {
     "window_size": [800, 600],
-    "image_formats": [".png",".jpg",".svg",".jpeg",".bmp",".gif",".tiff"],
+    "image_formats": [".jpg",".png",".svg",".jpeg",".bmp",".tiff"],
     "default_path": "images",
     "deault_visual_path": "visual_images",
     "elements_translation": {"SIC":'海冰密集度',"SIT":'海冰厚度',"SIE":'海冰范围',"SIV":'海冰体积','SID':'海冰流速',"SIA": "海冰面积"},
