@@ -185,6 +185,10 @@ class ShowImage(QMainWindow):
             self.time_pic=True
         else:
             self.time_pic=False
+        if r"_A" in name:
+            self.edge_latitude=30
+        elif r"_B" in name:
+            self.edge_latitude=66.5
         if image_path.lower().endswith('.svg'):
             self.image_type = 'svg'
             self.show_svg(image_path)
@@ -428,7 +432,7 @@ class ShowImage(QMainWindow):
                 self.status_bar.showMessage(f"导出文件失败: {str(e)}", 5000)
 
 
-    def pixel_to_coords(self, x, y,edge_latitude=45):
+    def pixel_to_coords(self, x, y):
         # 获取图像的中心
         if self.get_circle and self.centerx and self.centery and self.radius:
             center_x, center_y, radius = self.centerx,self.centery,self.radius
@@ -445,7 +449,7 @@ class ShowImage(QMainWindow):
         # 这里假设图像的边缘是 edge_latitude 纬度，中心是北极（90度纬度）
         if r > radius:
             return 0,0
-        latitude_range = 90 - edge_latitude
+        latitude_range = 90 - self.edge_latitude
         latitude = 90 - (r / radius) * latitude_range
 
         # 将 theta 转换为经度
