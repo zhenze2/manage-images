@@ -11,6 +11,7 @@ from utils.ImageViewer import ShowImage,MutiShowImage
 
 PATH_INDEX=r"conf\index_image.pkl"
 PATH_CONFIG=r"conf\config.json"
+PATH_CIRCLES=r"conf\circels.pkl"
 # PyQt5
 # 打包命令
 '''
@@ -19,7 +20,7 @@ pyinstaller --onefile --noconsole index_search\\Index_search.py
 '''
 Nuitka 打包
 
-python -m nuitka --standalone --mingw64 --onefile ^
+python -m nuitka --standalone --mingw64 --oindex_file_path
     --remove-output ^
     --disable-console ^
     --plugin-enable=pyqt5 ^
@@ -35,6 +36,7 @@ class MainWindow(QMainWindow):
         self.current_dir=os.path.dirname(sys.argv[0])
         Config.current_dir = self.current_dir
         Config.index_file_path = os.path.join(self.current_dir,PATH_INDEX)
+        Config.circles_path = os.path.join(self.current_dir,PATH_CIRCLES)
         conf_dir = os.path.join(self.current_dir, "conf")
         if not os.path.exists(conf_dir):
             os.makedirs(conf_dir)

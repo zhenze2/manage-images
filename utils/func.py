@@ -10,6 +10,7 @@ class CONFIG():
         self.current_dir=None # 主文件所在目录
         self.ELEMENTS_TRANSLATION=None # 中文名称转换
         self.index_file_path=None # 索引文件路径
+        self.circles_path=None # 图片圆形位置
 
 Config=CONFIG()
 # 初始文件格式

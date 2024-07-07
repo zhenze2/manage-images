@@ -7,7 +7,7 @@ from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
 from netCDF4 import Dataset
 import pandas as pd
 import os
-from utils.func import Config
+from utils.func import Config,load_index_image,save_index_image
 import cv2
 import numpy as np
 import re
@@ -44,7 +44,8 @@ class CircleDetectionThread(QThread):
                     radius = (i[2] * 2)
                     return center_x, center_y, radius
         except Exception as e:
-            print(f"Error in detecting circle: {e}")
+            return None, None, None
+            # print(f"Error in detecting circle: {e}")
         return None, None, None
 
 
@@ -66,6 +67,7 @@ class ShowImage(QMainWindow):
         self.image_type = None
         self.get_circle=False
         self.circle_thread = None
+        self.centerx,self.centery,self.radius=None,None,None
         self.initUI()
     def initUI(self):
         self.setWindowTitle("Image Viewer")
@@ -146,6 +148,14 @@ class ShowImage(QMainWindow):
     def is_get_circle(self):
         if not self.get_circle and self.image_path:
             self.get_circle = True
+            self.circles=load_index_image(Config.circles_path)
+            if self.circles:
+                if self.image_name in list(self.circles.keys()):
+                    self.centerx,self.centery,self.radius=self.circles[self.image_name]
+                    # print(self.centerx,self.centery,self.radius)
+                    return
+            else:
+                self.circles={}
             if self.circle_thread and self.circle_thread.isRunning():
                 self.circle_thread.quit()
                 self.circle_thread.wait()
@@ -154,6 +164,8 @@ class ShowImage(QMainWindow):
             self.circle_thread.start()
     def on_circle_detected(self, result):
         self.centerx, self.centery, self.radius = result
+        self.circles[self.image_name]=result
+        save_index_image(self.circles,Config.circles_path)
     def showHelp(self):
         help_text = """
         <h3>快捷键</h3>
@@ -165,8 +177,14 @@ class ShowImage(QMainWindow):
 
     def show_image(self, image_path):
         self.image_path = image_path
-        # print(self.image_path, os.path.basename(self.image_path))
         self.image_name=os.path.basename(self.image_path)
+        # print(self.image_path, os.path.basename(self.image_path))
+        pattern = r'_\d{4}?'+'$'
+        name=os.path.splitext(self.image_name)[0]
+        if re.search(pattern, name):
+            self.time_pic=True
+        else:
+            self.time_pic=False
         if image_path.lower().endswith('.svg'):
             self.image_type = 'svg'
             self.show_svg(image_path)
@@ -175,16 +193,6 @@ class ShowImage(QMainWindow):
             self.show_raster_image(image_path)
         self.status_bar.showMessage(f"纬度: N{0:.2f}\u00B0  经度: {0:.2f}\u00B0")
         self.show()
-        if self.get_circle:
-            self.centerx,self.centery,self.radius=self.detect_circle()
-        else:
-            self.centerx,self.centery,self.radius=-1,-1,-1
-        pattern = r'_\d{4}?'+'$'
-        name=os.path.splitext(self.image_name)[0]
-        if re.search(pattern, name):
-            self.time_pic=True
-        else:
-            self.time_pic=False
     def show_svg(self, svg_path):
         # 创建 QGraphicsScene 和 QGraphicsSvgItem
         self.graphics_scene = QGraphicsScene()
@@ -277,6 +285,7 @@ class ShowImage(QMainWindow):
 
     def play_next_image(self):
         # 播放下一张图片逻辑
+        self.get_circle=False
         next_node = self.next(self.current_Node)
         while next_node and next_node.data(0, Qt.UserRole)[0]!="photo":# 图片文件
             if next_node.data(0, Qt.UserRole)[0] == "file":# 最底层的文件，名称有关文件地址
@@ -318,6 +327,7 @@ class ShowImage(QMainWindow):
 
     def play_last_image(self):
         # 播放上一张图片逻辑
+        self.get_circle=False
         prev_node = self.prev(self.current_Node)
         while prev_node and prev_node.data(0, Qt.UserRole)[0]!="photo":
             if prev_node.data(0, Qt.UserRole)[0] == "file":
@@ -418,34 +428,12 @@ class ShowImage(QMainWindow):
                 self.status_bar.showMessage(f"导出文件失败: {str(e)}", 5000)
 
 
-    # def detect_circle(self):
-    #     # 读取并缩小图片尺寸
-    #     image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
-    #     image = cv2.equalizeHist(image)
-    #     resized_image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)  # 缩小一半
-    #     # 应用高斯模糊以减少噪点
-    #     blurred = cv2.GaussianBlur(resized_image, (3, 3), 0)
-    #     # 使用霍夫圆检测来找到图片中的圆
-    #     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, minDist=100, param1=50, param2=30, minRadius=50, maxRadius=0)
-    #     if circles is not None:
-    #         circles = np.uint16(np.around(circles))
-    #         for i in circles[0, :]:
-    #             # 获取圆心坐标和半径，并放大至原图尺寸
-    #             center_x = (i[0] * 2)
-    #             center_y = (i[1] * 2)
-    #             radius = (i[2] * 2)
-    #             return center_x, center_y, radius
-    #     return None, None, None
-
-
     def pixel_to_coords(self, x, y,edge_latitude=45):
         # 获取图像的中心
-        if self.get_circle:
+        if self.get_circle and self.centerx and self.centery and self.radius:
             center_x, center_y, radius = self.centerx,self.centery,self.radius
         else:
-            center_x = self.graphics_scene.width() / 2
-            center_y = self.graphics_scene.height() / 2
-            radius = min(center_x, center_y)
+            return 0,0
 
         # 计算从中心到点 (x, y) 的距离（半径）
         dx = x - center_x
