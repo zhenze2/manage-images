@@ -1,7 +1,7 @@
 import shutil
 import math
 from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox,QStatusBar,QApplication
-from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF
+from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF,QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap,QKeyEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
 from netCDF4 import Dataset
@@ -11,6 +11,42 @@ from utils.func import Config
 import cv2
 import numpy as np
 import re
+
+class CircleDetectionThread(QThread):
+    circle_detected = pyqtSignal(tuple)
+    def __init__(self, image_path):
+        super().__init__()
+        self.image_path = image_path
+    def run(self):
+        self.centerx, self.centery, self.radius = self.detect_circle()
+        self.circle_detected.emit((self.centerx, self.centery, self.radius))
+
+    def detect_circle(self):
+        if not self.image_path:
+            return None, None, None
+        # 读取并缩小图片尺寸
+        try:
+            image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
+            if image is None:
+                return None, None, None
+            image = cv2.equalizeHist(image)
+            resized_image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)  # 缩小一半
+            # 应用高斯模糊以减少噪点
+            blurred = cv2.GaussianBlur(resized_image, (3, 3), 0)
+            # 使用霍夫圆检测来找到图片中的圆
+            circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, minDist=100, param1=50, param2=30, minRadius=50, maxRadius=0)
+            if circles is not None:
+                circles = np.uint16(np.around(circles))
+                for i in circles[0, :]:
+                    # 获取圆心坐标和半径，并放大至原图尺寸
+                    center_x = (i[0] * 2)
+                    center_y = (i[1] * 2)
+                    radius = (i[2] * 2)
+                    return center_x, center_y, radius
+        except Exception as e:
+            print(f"Error in detecting circle: {e}")
+        return None, None, None
+
 
 class ShowImage(QMainWindow):
     windows=[]
@@ -29,6 +65,7 @@ class ShowImage(QMainWindow):
         self.re_current_local=False
         self.image_type = None
         self.get_circle=False
+        self.circle_thread = None
         self.initUI()
     def initUI(self):
         self.setWindowTitle("Image Viewer")
@@ -51,6 +88,7 @@ class ShowImage(QMainWindow):
         self.play_button = QPushButton("自动播放")
         self.local_button = QCheckBox("局部播放")
         self.next_button = QPushButton("下一张")
+        self.load_lonlat = QPushButton("加载经纬度")
         self.prev_button.setFixedHeight(25)
         self.play_button.setFixedHeight(25)
         self.local_button.setFixedHeight(25)
@@ -59,6 +97,7 @@ class ShowImage(QMainWindow):
         self.status_bar.setFixedWidth(250)
         button_layout.addWidget(self.prev_button)
         button_layout.addWidget(self.play_button)
+        button_layout.addWidget(self.load_lonlat)
         button_layout.addWidget(self.local_button)
         button_layout.addWidget(self.status_bar)
         button_layout.addWidget(self.next_button)
@@ -78,6 +117,8 @@ class ShowImage(QMainWindow):
         self.next_button.clicked.connect(self.play_next_image)
         self.play_button.clicked.connect(self.auto_play)
         self.local_button.clicked.connect(self.play_local)
+        self.load_lonlat.clicked.connect(self.is_get_circle)
+
         # 设置按钮长按绑定
         self.prev_button.setAutoRepeat(True)    # 长按的时候出发点击事件重复触发
         self.next_button.setAutoRepeat(True)
@@ -100,9 +141,19 @@ class ShowImage(QMainWindow):
         export_action_nc.triggered.connect(self.save_nc)
         export_menu.addAction(export_action_nc)
         self.windows.append(self)
-        
         self.setMouseTracking(True)
 
+    def is_get_circle(self):
+        if not self.get_circle and self.image_path:
+            self.get_circle = True
+            if self.circle_thread and self.circle_thread.isRunning():
+                self.circle_thread.quit()
+                self.circle_thread.wait()
+            self.circle_thread = CircleDetectionThread(self.image_path)
+            self.circle_thread.circle_detected.connect(self.on_circle_detected)
+            self.circle_thread.start()
+    def on_circle_detected(self, result):
+        self.centerx, self.centery, self.radius = result
     def showHelp(self):
         help_text = """
         <h3>快捷键</h3>
@@ -367,24 +418,26 @@ class ShowImage(QMainWindow):
                 self.status_bar.showMessage(f"导出文件失败: {str(e)}", 5000)
 
 
-    def detect_circle(self):
-        # 读取并缩小图片尺寸
-        image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
-        image = cv2.equalizeHist(image)
-        resized_image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)  # 缩小一半
-        # 应用高斯模糊以减少噪点
-        blurred = cv2.GaussianBlur(resized_image, (3, 3), 0)
-        # 使用霍夫圆检测来找到图片中的圆
-        circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, minDist=100, param1=50, param2=30, minRadius=50, maxRadius=0)
-        if circles is not None:
-            circles = np.uint16(np.around(circles))
-            for i in circles[0, :]:
-                # 获取圆心坐标和半径，并放大至原图尺寸
-                center_x = int(i[0] * 2)
-                center_y = int(i[1] * 2)
-                radius = int(i[2] * 2)
-                return center_x, center_y, radius
-        return None, None, None
+    # def detect_circle(self):
+    #     # 读取并缩小图片尺寸
+    #     image = cv2.imread(self.image_path, cv2.IMREAD_GRAYSCALE)
+    #     image = cv2.equalizeHist(image)
+    #     resized_image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)  # 缩小一半
+    #     # 应用高斯模糊以减少噪点
+    #     blurred = cv2.GaussianBlur(resized_image, (3, 3), 0)
+    #     # 使用霍夫圆检测来找到图片中的圆
+    #     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, minDist=100, param1=50, param2=30, minRadius=50, maxRadius=0)
+    #     if circles is not None:
+    #         circles = np.uint16(np.around(circles))
+    #         for i in circles[0, :]:
+    #             # 获取圆心坐标和半径，并放大至原图尺寸
+    #             center_x = (i[0] * 2)
+    #             center_y = (i[1] * 2)
+    #             radius = (i[2] * 2)
+    #             return center_x, center_y, radius
+    #     return None, None, None
+
+
     def pixel_to_coords(self, x, y,edge_latitude=45):
         # 获取图像的中心
         if self.get_circle:
@@ -441,7 +494,7 @@ class ShowImage(QMainWindow):
                 elif event.type() == QEvent.MouseMove:
                     # logging.debug("Mouse move event detected")
                     # 显示经纬度
-                    if not self.time_pic:
+                    if not self.time_pic and self.get_circle:
                         scene_coords = self.graphics_view.mapToScene(event.pos())
                         x, y = scene_coords.x(), scene_coords.y()
                         latitude, longitude = self.pixel_to_coords(x, y)
