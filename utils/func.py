@@ -224,7 +224,7 @@ def muti_search(entry_path, entry_date_search,index_dict,elements,tree,cate='A')
     # 获取待索引目录路径
     directory_to_index = entry_path.text()
     # 获取输入的文件名
-    search_filename = entry_date_search.text()
+    search_filename = entry_date_search
     # 检查是否选择了目录
     if not directory_to_index:
         QMessageBox.critical(None, "错误", "请选择目录")

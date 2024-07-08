@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea,QAction,QMessageBox,QMenu,QInputDialog,QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QFileDialog,QLineEdit, QTreeWidget, QTreeWidgetItem, QLabel,  QHBoxLayout, QGridLayout,  QComboBox,QCheckBox,QScrollArea,QAction,QMessageBox,QMenu,QInputDialog,QVBoxLayout,QSpinBox
 from PyQt5.QtCore import Qt,QTranslator, QLocale, QLibraryInfo
 from PyQt5.QtGui import QIcon,QFont
 import sys
@@ -88,14 +88,14 @@ class MainWindow(QMainWindow):
         self.button_update_format = QPushButton("更新")
         
         # 设置分隔符
-        self.label_sep=QLabel("分隔符")
-        self.sep=QComboBox()
-        self.sep.addItem("_")
-        self.sep.addItem("-")
+        # self.label_sep=QLabel("分隔符")
+        # self.sep=QComboBox()
+        # self.sep.addItem("_")
+        # self.sep.addItem("-")
         
         format_sep_layout=QHBoxLayout()
         format_sep_layout.addWidget(self.image_format_commbox)
-        format_sep_layout.addWidget(self.sep)
+        # format_sep_layout.addWidget(self.sep)
         
         merge_widget=QWidget()
         merge_widget.setLayout(format_sep_layout)
@@ -129,9 +129,23 @@ class MainWindow(QMainWindow):
         # 创建多图显示搜索栏标签和输入框
         self.entry_elemets = QLineEdit()
         self.entry_elemets.setPlaceholderText("输入要素简写,以逗号分隔(SIV,SIC)")
-        self.entry_muti_search = QLineEdit()
-        self.entry_muti_search.setPlaceholderText("输入搜索日期")
+        # self.entry_muti_search = QLineEdit()
+        # self.entry_muti_search.setPlaceholderText("输入搜索日期")
+        self.year_spin = QSpinBox()
+        self.year_spin.setRange(1800, 5000)
+        self.month_spin = QSpinBox()
+        self.month_spin.setRange(1, 12)
+        self.day_spin = QSpinBox()
+        self.day_spin.setRange(1, 31)
+        self.search_date=QHBoxLayout()
+        self.search_date.addWidget(self.year_spin)
+        self.search_date.addWidget(self.month_spin)
+        self.search_date.addWidget(self.day_spin)
+        self.entry_muti_search = QWidget()
+        self.entry_muti_search.setLayout(self.search_date)
         muti_search=QHBoxLayout()
+        m_line=QLabel()
+        m_line.setText("多图显示：")
         muti_search.addWidget(self.entry_elemets)
         muti_search.addWidget(self.entry_muti_search)
         self.muti_search=QWidget()
@@ -159,8 +173,8 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.label_image_format,4,0)
         
 
-        self.main_layout.addWidget(merge_widget,4,1)
-        self.main_layout.addWidget(self.label_sep,4,2,alignment=Qt.AlignCenter)
+        self.main_layout.addWidget(merge_widget,4,1,1,2)
+        # self.main_layout.addWidget(self.label_sep,4,2,alignment=Qt.AlignCenter)
 
         self.main_layout.addWidget(self.label_search,5,0)
         self.main_layout.addWidget(self.entry_global_search,5,1)
@@ -168,9 +182,10 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.time_label,6,0)
         self.main_layout.addWidget(self.time_entry,6,1)
         self.main_layout.addWidget(self.button_load_file,6,2)
-
-        self.main_layout.addWidget(self.button_multi_image,7,2)
+        self.main_layout.addWidget(m_line,7,0)
         self.main_layout.addWidget(self.muti_search,7,1)
+        self.main_layout.addWidget(self.button_multi_image,7,2)
+
         self.scroll_area.setFixedHeight(40)
         self.main_layout.addWidget(self.scroll_area,8,0,1,3)
 
@@ -190,7 +205,7 @@ class MainWindow(QMainWindow):
         self.button_load_file.clicked.connect(self.load_file)# 点击可视化按钮，加载文件
         self.button_multi_image.clicked.connect(self.show_multi_images) # 点击显示多张图片按钮，显示多张图片
         self.image_format_commbox.activated[str].connect(self.update_image_format)
-        self.sep.activated[str].connect(self.update_sep)
+        # self.sep.activated[str].connect(self.update_sep)
 
         self.browse_directory(self.default_path)
 
@@ -406,24 +421,27 @@ class MainWindow(QMainWindow):
     def show_multi_images(self):
         c=self.getInputType()
         # 显示多张图片
-        if self.entry_muti_search.text() == "":
-            self.hide_last_level_options()
-            return
+        # date = self.entry_muti_search.text()
+        # if self.entry_muti_search.text() == "":
+        #     self.hide_last_level_options()
+        #     return
+        date=f'{self.year_spin.value():04d}_{self.month_spin.value():02d}_{self.day_spin.value():02d}'
         if not c:
             return
         elements=list(self.config_manager.get("elements_translation").keys())
-        # input_elements=self.entry_elemets.text().replace('，',',').split(",")
-        input_elements = [e.strip() for e in self.entry_elemets.text().replace('，',',').split(",") if e.strip()]
+        # input_elements=date.replace('，',',').split(",")
+        input_elements = [e.strip() for e in date.replace('，',',').split(",") if e.strip()]
         # print(input_elements)
         for i in input_elements:
             if i not in elements and i!="":
                 elements.append(i)
-        dicts,self.paths,items = muti_search(self.entry_path,self.entry_muti_search,self.data,elements,self.tree,c)
-        if dicts is None:
+        dicts,self.paths,items = muti_search(self.entry_path,date,self.data,elements,self.tree,c)
+        if dicts is None or (isinstance(dicts, list) and all(isinstance(sublist, list) and not sublist for sublist in dicts)):
             return
-        if self.last_input != self.entry_muti_search.text():
+        if self.last_input != date:
+            # print(dicts)
             self.update_checkboxes(dicts)
-        self.last_input=self.entry_muti_search.text()
+        self.last_input=date
         
         image_paths = [path for i, path in enumerate(self.paths) if self.checkboxes[i].isChecked() and path is not None]
         c_name = [name for category in dicts for name in category]

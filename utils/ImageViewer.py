@@ -440,11 +440,14 @@ class ShowImage(QMainWindow):
             return 0,0
 
         # 计算从中心到点 (x, y) 的距离（半径）
-        dx = x - center_x
-        dy = y - center_y
+        # dx = x - center_x
+        # dy = y - center_y
+        dx = y - center_y # 垂直线往下为0度
+        dy = x - center_x # 水平线往右为E90度
         r = math.sqrt(dx**2 + dy**2)
         # 计算角度
         theta = math.atan2(dy, dx)
+        # print(x,y,center_x,center_y)
         # 将 r 转换为纬度
         # 这里假设图像的边缘是 edge_latitude 纬度，中心是北极（90度纬度）
         if r > radius:
@@ -454,10 +457,6 @@ class ShowImage(QMainWindow):
 
         # 将 theta 转换为经度
         longitude = math.degrees(theta)
-        if longitude!=-90:
-            longitude = (longitude + 90)%180
-        else:
-            longitude = 180
 
         return latitude, longitude
     def eventFilter(self, obj, event):
