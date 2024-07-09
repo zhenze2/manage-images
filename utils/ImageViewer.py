@@ -667,54 +667,87 @@ class MutiShowImage(ShowImage):
         self.playing = [False] * len(self.image_paths)
         self.timers = [None] * len(self.image_paths)
     def initUI(self):
-        self.setWindowTitle("Image Viewer")
+        self.setWindowTitle("Muti Image Viewer")
         self.setGeometry(100, 100, 1200, 800)
         self.setMinimumSize(800, 600)
         main_layout = QVBoxLayout()
-        grid_layout = QGridLayout()  # 使用网格布局
-        row_count = int(len(self.image_paths)**0.5+0.5)
-        for i in range(len(self.image_paths)):
+        grid_layout = self.create_grid_layout()
+        main_layout.addLayout(grid_layout)
+        main_layout.setAlignment(Qt.AlignCenter)
+
+        button_layout = self.create_button_layout()
+        main_layout.addLayout(button_layout)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
+        step_scroll_widget = self.create_step_scroll_widget()
+        main_layout.addWidget(step_scroll_widget)
+
+        central_widget = QWidget()
+        central_widget.setLayout(main_layout)
+        self.setCentralWidget(central_widget)
+        self.installEventFilter(self)
+
+        self.prev_button.clicked.connect(self.play_last_image)
+        self.next_button.clicked.connect(self.play_next_image)
+        self.play_button.clicked.connect(self.auto_play)
+        self.zoom_button.clicked.connect(self.toggle_zoom_mode)
+        self.prev_button.setAutoRepeat(True)
+        self.next_button.setAutoRepeat(True)
+        main_layout.setContentsMargins(0, 0, 0, 0)  # 左，上，右，下
+        button_layout.setContentsMargins(0, 0, 0, 0)  # 使按钮紧靠窗口底部边缘
+        self.windows.append(self)
+
+    def create_grid_layout(self):
+        grid_layout = QGridLayout()
+        # row_count = int(len(self.image_paths) ** 0.5 + 0.5)
+        cols = [0, 0, 0]
+        for i, path in enumerate(self.image_paths):
             graphics_view = QGraphicsView()
             graphics_scene = QGraphicsScene()
             graphics_view.viewport().installEventFilter(self)
             graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            graphics_view.setFrameStyle(0)  # 去掉边框
+            graphics_view.setFrameStyle(0)
             self.graphics_views.append(graphics_view)
             self.graphics_scenes.append(graphics_scene)
 
-            row = i // row_count  # 行数
-            col = i % row_count  # 列数
+            if 'SIO' in path:
+                row, col = 1, cols[1]
+                cols[1] += 1
+            elif 'SSD' in path:
+                row, col = 2, cols[2]
+                cols[2] += 1
+            else:
+                row, col = 0, cols[0]
+                cols[0] += 1
+
             grid_layout.addWidget(graphics_view, row, col)
 
         grid_layout.setContentsMargins(0, 0, 0, 0)
-        # grid_layout.setSpacing(0)
-        main_layout.addLayout(grid_layout)
-        main_layout.setAlignment(Qt.AlignCenter)
-        
-        # 设置按钮
+        return grid_layout
+
+    def create_button_layout(self):
         button_layout = QHBoxLayout()
         self.prev_button = QPushButton("上一张")
         self.play_button = QPushButton("自动播放")
-        # self.local_button = QCheckBox("局部播放")
         self.zoom_button = QCheckBox("整体放缩")
         self.next_button = QPushButton("下一张")
-        self.prev_button.setFixedHeight(25)
-        self.play_button.setFixedHeight(25)
-        # self.local_button.setFixedHeight(25)
-        self.zoom_button.setFixedHeight(25)
-        # self.local_button.setChecked(False)
-        self.zoom_button.setChecked(False)
-        self.next_button.setFixedHeight(25)
-        button_layout.addWidget(self.prev_button)
-        button_layout.addWidget(self.play_button)
-        # button_layout.addWidget(self.local_button, alignment=Qt.AlignCenter)  # 设置复选框居中
-        button_layout.addWidget(self.zoom_button, alignment=Qt.AlignCenter)
-        button_layout.addWidget(self.next_button)
-        
-        main_layout.addLayout(button_layout)
-        main_layout.setContentsMargins(0, 0, 0, 0)  # 左，上，右，下
-        button_layout.setContentsMargins(0, 0, 0, 0)  # 使按钮紧靠窗口底部边缘
+
+        for button in [self.prev_button, self.play_button, self.zoom_button, self.next_button]:
+            button.setFixedHeight(25)
+            if button==self.zoom_button:
+                button_layout.addWidget(button, alignment=Qt.AlignCenter)
+            else:
+                button_layout.addWidget(button)
+
+        return button_layout
+
+    def create_step_scroll_widget(self):
+        step_scroll = QHBoxLayout()
+        self.step = QSpinBox()
+        self.step.setRange(1, 100)
+        step_scroll.addWidget(QLabel("步长"))
+        step_scroll.addWidget(self.step)
 
         scroll_area = QScrollArea()
         checkbox_widget = QWidget()
@@ -726,62 +759,45 @@ class MutiShowImage(ShowImage):
         scroll_area.setFixedHeight(50)
         checkbox_layout.setContentsMargins(0, 0, 0, 0)
         self.checkbox_layout = checkbox_layout
-        step_scroll=QHBoxLayout()
-        # self.step=QDoubleSpinBox()
-        self.step=QSpinBox()
-        self.step.setRange(1,100)
-        step_scroll.addWidget(QLabel("步长"))
-        step_scroll.addWidget(self.step)
         step_scroll.addWidget(scroll_area)
         step_scroll.setAlignment(Qt.AlignCenter)
         step_scroll.setContentsMargins(0, 0, 0, 0)
-        step_scroll_widget=QWidget()
+
+        step_scroll_widget = QWidget()
         step_scroll_widget.setLayout(step_scroll)
         step_scroll_widget.setFixedHeight(50)
-        main_layout.addWidget(step_scroll_widget)
-
-        central_widget = QWidget()
-        central_widget.setLayout(main_layout)
-        self.setCentralWidget(central_widget)
-        self.installEventFilter(self)
-
-        self.prev_button.clicked.connect(self.play_last_image)
-        self.next_button.clicked.connect(self.play_next_image)
-        self.play_button.clicked.connect(self.auto_play)
-        # self.local_button.clicked.connect(self.play_local)
-        self.zoom_button.clicked.connect(self.toggle_zoom_mode)
-        self.prev_button.setAutoRepeat(True)
-        self.next_button.setAutoRepeat(True)
-        self.windows.append(self)
-    def show_images(self, image_paths,index=None):
+        return step_scroll_widget
+    def show_images(self, image_paths, index=None):
         if index is not None:
-            # print("Show image in index:",index," with path:",image_paths,'and lenth of image_paths:',len(self.image_paths))
-            self.image_paths[index] = image_paths
-            self.image_names[index] = os.path.basename(image_paths)
-            image_path=image_paths
-            if image_path.lower().endswith('.svg'):
-                self.image_types[index]='svg'
-                self.show_svg(image_path, index)
-            else:
-                # print(image_path)
-                self.image_types[index]='raster'
-                self.show_raster_image(image_path, index)
+            self.update_image_at_index(image_paths, index)
         else:
-            self.image_paths = image_paths
-            self.image_names = [os.path.basename(path) for path in image_paths]
-            for i, image_path in enumerate(image_paths):
-                if image_path.lower().endswith('.svg'):
-                    self.image_types.append('svg')
-                    self.show_svg(image_path, i)
-                else:
-                    # print(image_path)
-                    self.image_types.append('raster')
-                    self.show_raster_image(image_path, i)
-                checkbox = QCheckBox(self.check_names[i])
-                checkbox.setChecked(True)
-                self.checkbox_layout.addWidget(checkbox)
-                self.image_checkboxes.append(checkbox)
+            self.update_all_images(image_paths)
         self.show()
+
+    def update_image_at_index(self, image_path, index):
+        self.image_paths[index] = image_path
+        self.image_names[index] = os.path.basename(image_path)
+        if image_path.lower().endswith('.svg'):
+            self.image_types[index] = 'svg'
+            self.show_svg(image_path, index)
+        else:
+            self.image_types[index] = 'raster'
+            self.show_raster_image(image_path, index)
+
+    def update_all_images(self, image_paths):
+        self.image_paths = image_paths
+        self.image_names = [os.path.basename(path) for path in image_paths]
+        for i, image_path in enumerate(image_paths):
+            if image_path.lower().endswith('.svg'):
+                self.image_types.append('svg')
+                self.show_svg(image_path, i)
+            else:
+                self.image_types.append('raster')
+                self.show_raster_image(image_path, i)
+            checkbox = QCheckBox(self.check_names[i])
+            checkbox.setChecked(True)
+            self.checkbox_layout.addWidget(checkbox)
+            self.image_checkboxes.append(checkbox)
 
     def show_svg(self, svg_path, index):
         self.graphics_scenes[index].clear()
@@ -833,24 +849,28 @@ class MutiShowImage(ShowImage):
             self.graphics_views[i].show()
 
     def play_next_image(self):
-        for i in range(len(self.current_Nodes)):
+        for i in range(len(self.image_checkboxes)):
             if self.image_checkboxes[i].isChecked():
                 self.show_next_image(i)
 
     def play_last_image(self):
-        for i in range(len(self.current_Nodes)):
+        for i in range(len(self.image_checkboxes)):
             if self.image_checkboxes[i].isChecked():
                 self.show_last_image(i)
     def show_next_image(self, index):
         next_node=self.next(self.current_Nodes[index],int(self.step.value()))
         file_path = next_node.data(0, Qt.UserRole)[1]
         self.current_Nodes[index]=next_node
+        if not file_path:
+            return
         self.show_images(file_path,index)
 
     def show_last_image(self, index):
         prev_node=self.prev(self.current_Nodes[index],int(self.step.value()))
         file_path = prev_node.data(0, Qt.UserRole)[1]
         self.current_Nodes[index]=prev_node
+        if not file_path:
+            return
         self.show_images(file_path,index)
     def next(self, node, step=1):
         def get_siblings(node):
@@ -969,7 +989,7 @@ class MutiShowImage(ShowImage):
                     level+=1
             return self.prev(current_node,remaining_step)
     def auto_play(self):
-        l=len(self.current_Nodes)
+        l=len(self.image_checkboxes)
         if True in self.playing:  # Assuming we control all views together
             for i in range(l):
                 self.playing[i] = False
@@ -1055,6 +1075,10 @@ class MutiShowImage(ShowImage):
             self.zoom_factor = 1.1
         else:
             self.zoom_factor = 1.1
+
+
+
+
 
 if __name__ == "__main__":
     "测试保存"

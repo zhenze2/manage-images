@@ -250,7 +250,11 @@ def muti_search(entry_path, entry_date_search,index_dict,elements,tree,cate='A')
             for head in start:
                 for k,v in Config.ELEMENTS_TRANSLATION.items():
                     if k in head:
-                        search_ids=[head.replace(k,v),NAME_SPACE.replace(SEPARATOR,""),cate]+ids
+                        if cate=='':
+                            search_ids=[head.replace(k,v),NAME_SPACE.replace(SEPARATOR,"")]+ids
+                        else:
+                            search_ids=[head.replace(k,v),NAME_SPACE.replace(SEPARATOR,""),cate]+ids
+                        # print(search_ids)
                 item=find_node_by_path(tree,search_ids)
                 if item:
                     ta.append(head)

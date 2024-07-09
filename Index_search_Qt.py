@@ -419,39 +419,44 @@ class MainWindow(QMainWindow):
         draw_window.draw_pic(file_path)
 
     def show_multi_images(self):
-        c=self.getInputType()
-        # 显示多张图片
-        # date = self.entry_muti_search.text()
-        # if self.entry_muti_search.text() == "":
-        #     self.hide_last_level_options()
-        #     return
-        date=f'{self.year_spin.value():04d}_{self.month_spin.value():02d}_{self.day_spin.value():02d}'
+        # 获取输入类型
+        c = self.getInputType()
+
+        # 获取日期
+        date = f'{self.year_spin.value():04d}_{self.month_spin.value():02d}_{self.day_spin.value():02d}'
+        # 如果没有输入类型，返回
         if not c:
             return
-        elements=list(self.config_manager.get("elements_translation").keys())
-        # input_elements=date.replace('，',',').split(",")
-        input_elements = [e.strip() for e in date.replace('，',',').split(",") if e.strip()]
-        # print(input_elements)
+        # 获取配置的元素
+        elements = list(self.config_manager.get("elements_translation").keys())
+        # 处理输入的元素
+        input_elements = [e.strip() for e in date.replace('，', ',').split(",") if e.strip()]
+        # 将输入的元素添加到配置的元素中
         for i in input_elements:
-            if i not in elements and i!="":
+            if i not in elements and i != "":
                 elements.append(i)
-        dicts,self.paths,items = muti_search(self.entry_path,date,self.data,elements,self.tree,c)
+        # 执行多重搜索
+        dicts, self.paths, items = muti_search(self.entry_path, date, self.data, elements, self.tree, c)
+        a1, a2, a3 = muti_search(self.entry_path, date, self.data, elements, self.tree, '')
+        dicts, self.paths, items = dicts + a1, self.paths + a2, items + a3
+        # 如果没有找到结果，返回
         if dicts is None or (isinstance(dicts, list) and all(isinstance(sublist, list) and not sublist for sublist in dicts)):
             return
+        # 如果输入的日期变化，更新复选框
         if self.last_input != date:
-            # print(dicts)
             self.update_checkboxes(dicts)
-        self.last_input=date
-        
+        self.last_input = date
+        # 获取选中的图片路径
         image_paths = [path for i, path in enumerate(self.paths) if self.checkboxes[i].isChecked() and path is not None]
+        # 获取类别名称
         c_name = [name for category in dicts for name in category]
-        
+        # 如果有图片路径，显示多张图片
         if image_paths:
-            # multi_image_display = MultiImageDisplay()
-            multi_image_display = MutiShowImage(tree=self.tree,time_entry=self.time_entry,image_paths=image_paths)
-            multi_image_display.check_names=c_name
-            multi_image_display.current_Nodes=items
+            multi_image_display = MutiShowImage(tree=self.tree, time_entry=self.time_entry, image_paths=image_paths)
+            multi_image_display.check_names = c_name
+            multi_image_display.current_Nodes = items
             multi_image_display.show_images(image_paths)
+
     def getInputType(self):
         items = ["A", "B"]
         item, ok = QInputDialog.getItem(self, " ", "请选择图类", items, editable=False)
