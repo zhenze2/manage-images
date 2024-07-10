@@ -414,22 +414,32 @@ class ShowImage(QMainWindow):
         name=os.path.splitext(img_name)[0]
         name=name.replace('_A','')
         name=name.replace('_B','')
+        suffix = name.split('_')[0]
         img_dir=img_dir.replace('_A','')
         img_dir=img_dir.replace('_B','')
-        extensions = ['.nc','.csv','.dat']
         ext='.nc'
-        source_file_path=os.path.join(img_dir.replace("images","data"),name+ext)
+        all_suffix = ['SIA','SIV','SIE']
+        end_name=name+ext
+        if suffix in all_suffix:
+            ext='.nc'
+            end_name= suffix+'_ALL'+ext
+            source_file_path=os.path.join(img_dir.replace("images","data"),end_name)
+        elif suffix=='SID':
+            year = name.split('_')[1]
+            end = f'{year}0101_{year}1231'
+            end_name = suffix+'_'+end+ext
+            source_file_path=os.path.join(img_dir.replace("images","data"),end_name)
+        else:
+            source_file_path=os.path.join(img_dir.replace("images","data"),name+ext)
         # print(source_file_path)
         if os.path.exists(source_file_path):
             try:
                 # 构造目标文件的完整路径
-                target_file_path = os.path.join(target_dir_path, name+ext)
+                target_file_path = os.path.join(target_dir_path, end_name)
                 # 复制文件到目标路径
                 shutil.copy(source_file_path, target_file_path)
-                # self.status_bar.showMessage(f"文件已成功导出到: {target_dir_path}", 5000)
             except Exception as e:
                 pass
-                self.status_bar.showMessage(f"导出文件失败: {str(e)}", 5000)
 
 
     def pixel_to_coords(self, x, y):
@@ -701,6 +711,8 @@ class MutiShowImage(ShowImage):
         grid_layout = QGridLayout()
         # row_count = int(len(self.image_paths) ** 0.5 + 0.5)
         cols = [0, 0, 0]
+        self.steps_times=[]
+        self.counters = []
         for i, path in enumerate(self.image_paths):
             graphics_view = QGraphicsView()
             graphics_scene = QGraphicsScene()
@@ -710,19 +722,23 @@ class MutiShowImage(ShowImage):
             graphics_view.setFrameStyle(0)
             self.graphics_views.append(graphics_view)
             self.graphics_scenes.append(graphics_scene)
-
             if 'SIO' in path:
+                self.steps_times.append(5)
+                self.counters.append(0)
                 row, col = 1, cols[1]
                 cols[1] += 1
             elif 'SSD' in path:
+                self.steps_times.append(5)
+                self.counters.append(0)
                 row, col = 2, cols[2]
                 cols[2] += 1
             else:
+                self.steps_times.append(1)
+                self.counters.append(0)
                 row, col = 0, cols[0]
                 cols[0] += 1
-
+            self.steps_times[0]=5
             grid_layout.addWidget(graphics_view, row, col)
-
         grid_layout.setContentsMargins(0, 0, 0, 0)
         return grid_layout
 
@@ -748,6 +764,10 @@ class MutiShowImage(ShowImage):
         self.step.setRange(1, 100)
         step_scroll.addWidget(QLabel("步长"))
         step_scroll.addWidget(self.step)
+        # self.step2 = QSpinBox()
+        # self.step2.setRange(1, 100)
+        # step_scroll.addWidget(QLabel("步长_L23"))
+        # step_scroll.addWidget(self.step2)
 
         scroll_area = QScrollArea()
         checkbox_widget = QWidget()
@@ -768,6 +788,8 @@ class MutiShowImage(ShowImage):
         step_scroll_widget.setFixedHeight(50)
         return step_scroll_widget
     def show_images(self, image_paths, index=None):
+        if not image_paths:
+            return
         if index is not None:
             self.update_image_at_index(image_paths, index)
         else:
@@ -836,7 +858,7 @@ class MutiShowImage(ShowImage):
         pixmap_item.setTransformationMode(Qt.SmoothTransformation)
         self.graphics_views[index].fitInView(pixmap_item, Qt.KeepAspectRatio)
         self.graphics_views[index].show()
-        
+
     def resize_image_label(self):
         for i, pixmap in enumerate(self.pixmaps):
             pixmap_item = QGraphicsPixmapItem(pixmap)
@@ -857,21 +879,68 @@ class MutiShowImage(ShowImage):
         for i in range(len(self.image_checkboxes)):
             if self.image_checkboxes[i].isChecked():
                 self.show_last_image(i)
+
     def show_next_image(self, index):
-        next_node=self.next(self.current_Nodes[index],int(self.step.value()))
-        file_path = next_node.data(0, Qt.UserRole)[1]
-        self.current_Nodes[index]=next_node
-        if not file_path:
-            return
-        self.show_images(file_path,index)
+        # next_node=self.next(self.current_Nodes[index],int(self.step.value()))
+        # file_path = next_node.data(0, Qt.UserRole)[1]
+        # self.current_Nodes[index]=next_node
+        # if not file_path:
+        #     return
+        # self.show_images(file_path,index)
+        # 获取当前图片的时间跨度
+        time_span = self.steps_times[index]
+        # 计数器递增
+        self.counters[index] += 1
+        # 只有当计数器达到时间跨度时，才移动到下一张图片
+        if self.counters[index] >= time_span:
+            # 重置计数器
+            self.counters[index] = 0
+
+            # 获取下一个节点
+            next_node = self.next(self.current_Nodes[index], int(self.step.value()))
+            file_path = next_node.data(0, Qt.UserRole)[1]
+            self.current_Nodes[index] = next_node
+
+            if not file_path:
+                return
+
+            self.show_images(file_path, index)
+        else:
+            # 继续显示当前图片
+            file_path = self.current_Nodes[index].data(0, Qt.UserRole)[1]
+            self.show_images(file_path, index)
 
     def show_last_image(self, index):
-        prev_node=self.prev(self.current_Nodes[index],int(self.step.value()))
-        file_path = prev_node.data(0, Qt.UserRole)[1]
-        self.current_Nodes[index]=prev_node
-        if not file_path:
-            return
-        self.show_images(file_path,index)
+        # prev_node=self.prev(self.current_Nodes[index],int(self.step.value()))
+        # file_path = prev_node.data(0, Qt.UserRole)[1]
+        # self.current_Nodes[index]=prev_node
+        # if not file_path:
+        #     return
+        # self.show_images(file_path,index)
+        # 获取当前图片的时间跨度
+        time_span = self.steps_times[index]
+
+        # 计数器递减
+        self.counters[index] -= 1
+
+        # 只有当计数器小于0时，才移动到上一张图片
+        if self.counters[index] < 0:
+            # 获取前一个节点
+            prev_node = self.prev(self.current_Nodes[index], int(self.step.value()))
+            file_path = prev_node.data(0, Qt.UserRole)[1]
+            self.current_Nodes[index] = prev_node
+
+            if not file_path:
+                return
+
+            # 重置计数器为前一张图片的时间跨度减1
+            self.counters[index] = self.steps_times[index] - 1
+
+            self.show_images(file_path, index)
+        else:
+            # 继续显示当前图片
+            file_path = self.current_Nodes[index].data(0, Qt.UserRole)[1]
+            self.show_images(file_path, index)
     def next(self, node, step=1):
         def get_siblings(node):
             parent = node.parent()
