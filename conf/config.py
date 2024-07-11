@@ -7,7 +7,7 @@ DEFAULT_CONFIG = {
     "image_formats": [".jpg",".png",".svg",".jpeg",".bmp",".tiff"],
     "default_path": "images",
     "deault_visual_path": "visual_images",
-    "elements_translation": {"SIC":'海冰密集度',"SIT":'海冰厚度',"SIE":'海冰范围',"SIV":'海冰体积','SID':'海冰流速',"SIA": "海冰面积"},
+    "elements_translation": {"SIC":'海冰密集度',"SIT":'海冰厚度',"SIE":'海冰范围',"SIV":'海冰体积','SID':'海冰流速',"SIA": "海冰面积","salt": "海洋盐度","temp": "海洋温度和流速", "dens": "海洋密度","mlt":"海洋混合层深度"},
     "Name_rule":'要素名称_年份_月份_日期',
 }
 

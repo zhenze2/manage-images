@@ -12,6 +12,9 @@ import cv2
 import numpy as np
 import re
 
+OCEANS = ['salt', 'temp','dens']
+DEPTHS = ['mlt']
+
 class CircleDetectionThread(QThread):
     circle_detected = pyqtSignal(tuple)
     def __init__(self, image_path):
@@ -146,7 +149,7 @@ class ShowImage(QMainWindow):
         self.setMouseTracking(True)
 
     def is_get_circle(self):
-        if not self.get_circle and self.image_path:
+        if not self.get_circle and self.image_path and not self.time_pic:
             self.get_circle = True
             self.circles=load_index_image(Config.circles_path)
             if self.circles:
@@ -181,7 +184,7 @@ class ShowImage(QMainWindow):
         # print(self.image_path, os.path.basename(self.image_path))
         pattern = r'_\d{4}?'+'$'
         name=os.path.splitext(self.image_name)[0]
-        if re.search(pattern, name):
+        if re.search(pattern, name) or name.split('_')[0] in OCEANS or name.split('_')[0] in DEPTHS:
             self.time_pic=True
         else:
             self.time_pic=False
@@ -708,11 +711,51 @@ class MutiShowImage(ShowImage):
         self.windows.append(self)
 
     def create_grid_layout(self):
-        grid_layout = QGridLayout()
-        # row_count = int(len(self.image_paths) ** 0.5 + 0.5)
+        # grid_layout = QGridLayout()
+        # # row_count = int(len(self.image_paths) ** 0.5 + 0.5)
+        # cols = [0, 0, 0]
+        # self.steps_times=[]
+        # self.counters = []
+        # oceans=['salt','temp']
+        # depths=['dens']
+        # for i, path in enumerate(self.image_paths):
+        #     graphics_view = QGraphicsView()
+        #     graphics_scene = QGraphicsScene()
+        #     graphics_view.viewport().installEventFilter(self)
+        #     graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #     graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #     graphics_view.setFrameStyle(0)
+        #     self.graphics_views.append(graphics_view)
+        #     self.graphics_scenes.append(graphics_scene)
+        #     suffix = os.path.basename(path).split('_')[0]
+        #     # print(suffix)
+        #     if suffix in oceans: 
+        #         self.steps_times.append(5) 
+        #         self.counters.append(0) 
+        #         row, col = 1, cols[1]
+        #         cols[1] += 1
+        #     elif suffix in depths:
+        #         self.steps_times.append(5) 
+        #         self.counters.append(0) 
+        #         row, col = 2, cols[2]
+        #         cols[2] += 1
+        #     else:
+        #         self.steps_times.append(1) 
+        #         self.counters.append(0) 
+        #         row, col = 0, cols[0]
+        #         cols[0] += 1
+        #     # self.steps_times[0]=5
+        #     grid_layout.addWidget(graphics_view, row, col) 
+        # grid_layout.setContentsMargins(0, 0, 0, 0)
+        # return grid_layout
+        vbox_layout = QVBoxLayout()
+        hbox_layouts = [QHBoxLayout(), QHBoxLayout(), QHBoxLayout()]
         cols = [0, 0, 0]
         self.steps_times=[]
         self.counters = []
+        oceans = OCEANS
+        depths = DEPTHS
+
         for i, path in enumerate(self.image_paths):
             graphics_view = QGraphicsView()
             graphics_scene = QGraphicsScene()
@@ -722,25 +765,30 @@ class MutiShowImage(ShowImage):
             graphics_view.setFrameStyle(0)
             self.graphics_views.append(graphics_view)
             self.graphics_scenes.append(graphics_scene)
-            if 'SIO' in path:
+            suffix = os.path.basename(path).split('_')[0]
+            
+            if suffix in oceans:
                 self.steps_times.append(5)
                 self.counters.append(0)
-                row, col = 1, cols[1]
-                cols[1] += 1
-            elif 'SSD' in path:
+                row = 1
+            elif suffix in depths:
                 self.steps_times.append(5)
                 self.counters.append(0)
-                row, col = 2, cols[2]
-                cols[2] += 1
+                row = 2
             else:
                 self.steps_times.append(1)
                 self.counters.append(0)
-                row, col = 0, cols[0]
-                cols[0] += 1
-            self.steps_times[0]=5
-            grid_layout.addWidget(graphics_view, row, col)
-        grid_layout.setContentsMargins(0, 0, 0, 0)
-        return grid_layout
+                row = 0
+            
+            hbox_layouts[row].addWidget(graphics_view)
+            cols[row] += 1
+
+        for hbox_layout in hbox_layouts:
+            if hbox_layout.count() > 0:
+                vbox_layout.addLayout(hbox_layout)
+
+        vbox_layout.setContentsMargins(0, 0, 0, 0)
+        return vbox_layout
 
     def create_button_layout(self):
         button_layout = QHBoxLayout()
@@ -755,7 +803,6 @@ class MutiShowImage(ShowImage):
                 button_layout.addWidget(button, alignment=Qt.AlignCenter)
             else:
                 button_layout.addWidget(button)
-
         return button_layout
 
     def create_step_scroll_widget(self):

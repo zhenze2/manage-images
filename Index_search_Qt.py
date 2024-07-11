@@ -124,7 +124,7 @@ class MainWindow(QMainWindow):
         self.button_load_file.setToolTip('加载文件进行数据可视化')
         
         # 显示多张图片
-        self.button_multi_image = QPushButton("显示多张图片")
+        self.button_multi_image = QPushButton("多图展示")
 
         # 创建多图显示搜索栏标签和输入框
         self.entry_elemets = QLineEdit()
@@ -145,8 +145,8 @@ class MainWindow(QMainWindow):
         self.entry_muti_search.setLayout(self.search_date)
         muti_search=QHBoxLayout()
         m_line=QLabel()
-        m_line.setText("多图显示：")
-        muti_search.addWidget(self.entry_elemets)
+        m_line.setText("多图显示(日期):")
+        # muti_search.addWidget(self.entry_elemets)
         muti_search.addWidget(self.entry_muti_search)
         self.muti_search=QWidget()
         self.muti_search.setLayout(muti_search)
