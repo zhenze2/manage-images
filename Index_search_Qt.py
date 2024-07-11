@@ -437,7 +437,7 @@ class MainWindow(QMainWindow):
                 elements.append(i)
         # 执行多重搜索
         dicts, self.paths, items = muti_search(self.entry_path, date, self.data, elements, self.tree, c)
-        a1, a2, a3 = muti_search(self.entry_path, date, self.data, elements, self.tree, '')
+        a1, a2, a3 = muti_search(self.entry_path, get_start_date(date), self.data, elements, self.tree, '')
         dicts, self.paths, items = dicts + a1, self.paths + a2, items + a3
         # 如果没有找到结果，返回
         if dicts is None or (isinstance(dicts, list) and all(isinstance(sublist, list) and not sublist for sublist in dicts)):
