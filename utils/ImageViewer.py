@@ -442,7 +442,11 @@ class ShowImage(QMainWindow):
                 # 复制文件到目标路径
                 shutil.copy(source_file_path, target_file_path)
             except Exception as e:
-                pass
+                # 发出错误消息
+                QMessageBox.critical(self, "错误", "保存失败")
+        else:
+            # 显示错误消息
+            QMessageBox.critical(self, "错误", "源文件不存在")
 
 
     def pixel_to_coords(self, x, y):
