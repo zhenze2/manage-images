@@ -17,6 +17,7 @@ PATH_CIRCLES=r"conf\circels.pkl"
 '''
 pyinstaller --onefile --noconsole index_search\\Index_search.py
 '''
+
 '''
 Nuitka 打包
 
@@ -47,7 +48,11 @@ class MainWindow(QMainWindow):
         self.config_manager = ConfigManager(self.config_file)
         
         Config.ELEMENTS_TRANSLATION=self.config_manager.get("elements_translation")
-
+        Config.no_lon_lat = self.config_manager.get("No_lon_lat")
+        Config.extra_directory = self.config_manager.get("extra_directory")
+        if  not os.path.isdir(Config.extra_directory):
+            QMessageBox.warning(self, "警告", "多要素额外文件夹不存在，请重新设置配置文件 config.json的extra_directory项后重启程序")
+        
         self.default_path=os.path.join(self.current_dir,self.config_manager.get("default_path"))
         self.checkboxes = []
         self.last_level_options = [] 
@@ -438,6 +443,8 @@ class MainWindow(QMainWindow):
         # 执行多重搜索
         dicts, self.paths, items = muti_search(self.entry_path, date, self.data, elements, self.tree, c)
         a1, a2, a3 = muti_search(self.entry_path, get_start_date(date), self.data, elements, self.tree, '')
+        dicts, self.paths, items = dicts + a1, self.paths + a2, items + a3
+        a1, a2, a3 = muti_search(self.entry_path, "0000_01_01", self.data, elements, self.tree, '')
         dicts, self.paths, items = dicts + a1, self.paths + a2, items + a3
         # 如果没有找到结果，返回
         if dicts is None or (isinstance(dicts, list) and all(isinstance(sublist, list) and not sublist for sublist in dicts)):

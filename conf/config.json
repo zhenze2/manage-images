@@ -25,7 +25,16 @@
         "salt": "海洋盐度",
         "temp": "海洋温度和流速",
         "dens": "海洋密度",
-        "mlt": "海洋混合层深度"
+        "depth": "海洋深度"
     },
+    "No_lon_lat": [
+        "salt",
+        "dens",
+        "salt",
+        "SIA",
+        "SIE",
+        "SIV"
+    ],
+    "extra_directory": "G:\\data\\muti\\all",
     "Name_rule": "要素名称_年份_月份_日期"
 }

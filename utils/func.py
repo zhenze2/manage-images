@@ -11,6 +11,8 @@ class CONFIG():
         self.ELEMENTS_TRANSLATION=None # 中文名称转换
         self.index_file_path=None # 索引文件路径
         self.circles_path=None # 图片圆形位置
+        self.no_lon_lat=None # 无经纬度要素
+        self.extra_directory=None # 额外索引目录
 
 Config=CONFIG()
 # 初始文件格式
@@ -42,6 +44,27 @@ def get_start_date(search_date_str):
     start_date = base_date + datetime.timedelta(days=(delta_days // 5) * 5)
     
     return start_date.strftime('%Y_%m_%d')
+
+def get_end_date(search_date_str):
+    """
+    根据搜索日期返回对应的五天间隔的结束日期。
+    """
+    # 将字符串转换为日期对象
+    search_date = datetime.datetime.strptime(search_date_str, '%Y_%m_%d')
+    
+    # 找到2011_01_01作为基准日期
+    base_date = datetime.datetime(2011, 1, 1)
+    
+    # 计算搜索日期和基准日期之间的天数差
+    delta_days = (search_date - base_date).days
+    
+    # 计算属于的五天间隔的起始日期
+    start_date = base_date + datetime.timedelta(days=(delta_days // 5) * 5)
+    
+    # 计算五天间隔的结束日期
+    end_date = start_date + datetime.timedelta(days=4)
+    
+    return end_date.strftime('%Y_%m_%d')
 
 def chinese_to_arabic_sort(arr):
     chinese_numbers= {

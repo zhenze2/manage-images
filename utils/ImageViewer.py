@@ -1,20 +1,21 @@
 import shutil
 import math
 from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox,QStatusBar,QApplication
-from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF,QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF,QThread, QRunnable, QThreadPool, pyqtSlot, QObject, pyqtSignal
 from PyQt5.QtGui import QPixmap,QKeyEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
-from netCDF4 import Dataset
+from concurrent.futures import ProcessPoolExecutor
+import netCDF4 as nc
 import pandas as pd
 import os
-from utils.func import Config,load_index_image,save_index_image
+from utils.func import Config,load_index_image,save_index_image,get_end_date
 import cv2
 import numpy as np
-import re
-
-OCEANS = ['salt', 'temp','dens']
-DEPTHS = ['mlt']
-
+from multiprocessing import Process
+import xarray as xr
+OCEANS = ['salt','dens','temp']
+DEPTHS = ['depth']
+import time
 class CircleDetectionThread(QThread):
     circle_detected = pyqtSignal(tuple)
     def __init__(self, image_path):
@@ -71,6 +72,7 @@ class ShowImage(QMainWindow):
         self.get_circle=False
         self.circle_thread = None
         self.centerx,self.centery,self.radius=None,None,None
+        self.thread_pool = QThreadPool()
         self.initUI()
     def initUI(self):
         self.setWindowTitle("Image Viewer")
@@ -182,9 +184,15 @@ class ShowImage(QMainWindow):
         self.image_path = image_path
         self.image_name=os.path.basename(self.image_path)
         # print(self.image_path, os.path.basename(self.image_path))
-        pattern = r'_\d{4}?'+'$'
         name=os.path.splitext(self.image_name)[0]
-        if re.search(pattern, name) or name.split('_')[0] in OCEANS or name.split('_')[0] in DEPTHS:
+        # pattern = r'_\d{4}?'+'$'
+        # if re.search(pattern, name) or name.split('_')[0] in OCEANS:
+        #     self.time_pic=True
+        # else:
+        #     self.time_pic=False
+        # if  name.split('_')[0]== 'temp':
+        #     self.time_pic=False
+        if name.split('_')[0] in Config.no_lon_lat:
             self.time_pic=True
         else:
             self.time_pic=False
@@ -192,6 +200,8 @@ class ShowImage(QMainWindow):
             self.edge_latitude=30
         elif r"_B" in name:
             self.edge_latitude=66.5
+        else:
+            self.edge_latitude=45
         if image_path.lower().endswith('.svg'):
             self.image_type = 'svg'
             self.show_svg(image_path)
@@ -418,8 +428,8 @@ class ShowImage(QMainWindow):
         name=name.replace('_A','')
         name=name.replace('_B','')
         suffix = name.split('_')[0]
-        img_dir=img_dir.replace('_A','')
-        img_dir=img_dir.replace('_B','')
+        img_dir=img_dir.replace('\\A','').replace('\\B','')
+        img_dir=img_dir.replace('_A','').replace('_B','')
         ext='.nc'
         all_suffix = ['SIA','SIV','SIE']
         end_name=name+ext
@@ -427,26 +437,52 @@ class ShowImage(QMainWindow):
             ext='.nc'
             end_name= suffix+'_ALL'+ext
             source_file_path=os.path.join(img_dir.replace("images","data"),end_name)
+            target_file_path = os.path.join(target_dir_path, end_name)
         elif suffix=='SID':
             year = name.split('_')[1]
             end = f'{year}0101_{year}1231'
             end_name = suffix+'_'+end+ext
             source_file_path=os.path.join(img_dir.replace("images","data"),end_name)
+            target_file_path = os.path.join(target_dir_path, end_name)
+        elif suffix=="SIT-PIOMAS":
+            year = name.split('_')[1]
+            end_name = year+ext
+            source_file_path=os.path.join(img_dir.replace("images","data"),end_name)
+            target_file_path = os.path.join(target_dir_path, end_name)
+        elif suffix in  ['temp',"salt"]:
+            # end_name = "_".join(["salt-temp-mlt"]+name.split('_')[1:])+ext
+            date="_".join(name.split('_')[1:])
+            date=get_end_date(date)
+            end_name="rare1.15.2_5dy_ocean_reg_"+date+ext
+            target_file_path = os.path.join(target_dir_path, "_".join([suffix]+name.split('_')[1:])+ext)
+            source_file_path=os.path.join(Config.extra_directory,end_name)
+        elif suffix == "dens":
+            date="_".join(name.split('_')[1:])
+            date=get_end_date(date)
+            end_name="density_rare1.15.2_5dy_ocean_reg_"+date+ext
+            target_file_path = os.path.join(target_dir_path, "_".join([suffix]+name.split('_')[1:])+ext)
+            source_file_path=os.path.join(Config.extra_directory,end_name)
+        elif suffix == "depth":
+            end_name="GEBCO_2023_sub_ice_topo.nc"
+            target_dir_path = os.path.join(target_dir_path,"depth"+ext)
+            source_file_path=os.path.join(Config.extra_directory,end_name)
+            # print(source_file_path,target_dir_path)
         else:
             source_file_path=os.path.join(img_dir.replace("images","data"),name+ext)
-        # print(source_file_path)
+            target_file_path = os.path.join(target_dir_path, end_name)
         if os.path.exists(source_file_path):
             try:
-                # 构造目标文件的完整路径
-                target_file_path = os.path.join(target_dir_path, end_name)
                 # 复制文件到目标路径
                 shutil.copy(source_file_path, target_file_path)
+
+                QMessageBox.information(self, "","保存成功")
+                # copy_with_progress(source_file_path, target_file_path)
             except Exception as e:
                 # 发出错误消息
                 QMessageBox.critical(self, "错误", "保存失败")
         else:
             # 显示错误消息
-            QMessageBox.critical(self, "错误", "源文件不存在")
+            QMessageBox.critical(self, "错误", f"{source_file_path}源文件不存在")
 
 
     def pixel_to_coords(self, x, y):
@@ -455,10 +491,7 @@ class ShowImage(QMainWindow):
             center_x, center_y, radius = self.centerx,self.centery,self.radius
         else:
             return 0,0
-
-        # 计算从中心到点 (x, y) 的距离（半径）
-        # dx = x - center_x
-        # dy = y - center_y
+        # 计算像素点到中心的距离
         dx = y - center_y # 垂直线往下为0度
         dy = x - center_x # 水平线往右为E90度
         r = math.sqrt(dx**2 + dy**2)
@@ -715,48 +748,13 @@ class MutiShowImage(ShowImage):
         self.windows.append(self)
 
     def create_grid_layout(self):
-        # grid_layout = QGridLayout()
-        # # row_count = int(len(self.image_paths) ** 0.5 + 0.5)
-        # cols = [0, 0, 0]
-        # self.steps_times=[]
-        # self.counters = []
-        # oceans=['salt','temp']
-        # depths=['dens']
-        # for i, path in enumerate(self.image_paths):
-        #     graphics_view = QGraphicsView()
-        #     graphics_scene = QGraphicsScene()
-        #     graphics_view.viewport().installEventFilter(self)
-        #     graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        #     graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        #     graphics_view.setFrameStyle(0)
-        #     self.graphics_views.append(graphics_view)
-        #     self.graphics_scenes.append(graphics_scene)
-        #     suffix = os.path.basename(path).split('_')[0]
-        #     # print(suffix)
-        #     if suffix in oceans: 
-        #         self.steps_times.append(5) 
-        #         self.counters.append(0) 
-        #         row, col = 1, cols[1]
-        #         cols[1] += 1
-        #     elif suffix in depths:
-        #         self.steps_times.append(5) 
-        #         self.counters.append(0) 
-        #         row, col = 2, cols[2]
-        #         cols[2] += 1
-        #     else:
-        #         self.steps_times.append(1) 
-        #         self.counters.append(0) 
-        #         row, col = 0, cols[0]
-        #         cols[0] += 1
-        #     # self.steps_times[0]=5
-        #     grid_layout.addWidget(graphics_view, row, col) 
-        # grid_layout.setContentsMargins(0, 0, 0, 0)
-        # return grid_layout
         vbox_layout = QVBoxLayout()
         hbox_layouts = [QHBoxLayout(), QHBoxLayout(), QHBoxLayout()]
         cols = [0, 0, 0]
         self.steps_times=[]
         self.counters = []
+        self.counters_back = []
+        self.layers=[]
         oceans = OCEANS
         depths = DEPTHS
 
@@ -774,14 +772,20 @@ class MutiShowImage(ShowImage):
             if suffix in oceans:
                 self.steps_times.append(5)
                 self.counters.append(0)
+                self.counters_back.append(0)
+                self.layers.append(1)
                 row = 1
             elif suffix in depths:
                 self.steps_times.append(5)
                 self.counters.append(0)
+                self.counters_back.append(0)
+                self.layers.append(2)
                 row = 2
             else:
                 self.steps_times.append(1)
                 self.counters.append(0)
+                self.counters_back.append(0)
+                self.layers.append(0)
                 row = 0
             
             hbox_layouts[row].addWidget(graphics_view)
@@ -815,10 +819,13 @@ class MutiShowImage(ShowImage):
         self.step.setRange(1, 100)
         step_scroll.addWidget(QLabel("步长"))
         step_scroll.addWidget(self.step)
-        # self.step2 = QSpinBox()
-        # self.step2.setRange(1, 100)
-        # step_scroll.addWidget(QLabel("步长_L23"))
-        # step_scroll.addWidget(self.step2)
+        self.step2 = QSpinBox()
+        self.step2.setRange(1, 100)
+        step_scroll.addWidget(self.step2)
+        self.step3 = QSpinBox()
+        self.step3.setRange(1, 100)
+        step_scroll.addWidget(self.step3)
+        self.steps=[self.step,self.step2,self.step3]
 
         scroll_area = QScrollArea()
         checkbox_widget = QWidget()
@@ -837,7 +844,17 @@ class MutiShowImage(ShowImage):
         step_scroll_widget = QWidget()
         step_scroll_widget.setLayout(step_scroll)
         step_scroll_widget.setFixedHeight(50)
+        self.step.valueChanged.connect(self.normalize_time)
+        self.step2.valueChanged.connect(self.normalize_time)
+        self.step3.valueChanged.connect(self.normalize_time)
+        self.abc=1
         return step_scroll_widget
+
+    def normalize_time(self):
+        new_steps = [int(step.value()) for step in self.steps]
+        gcd_ab = math.gcd(new_steps[0], 5*new_steps[1])
+        gcd_abc = math.gcd(gcd_ab, 5*new_steps[2])
+        self.abc=gcd_abc
     def show_images(self, image_paths, index=None):
         if not image_paths:
             return
@@ -932,23 +949,26 @@ class MutiShowImage(ShowImage):
                 self.show_last_image(i)
 
     def show_next_image(self, index):
-        # next_node=self.next(self.current_Nodes[index],int(self.step.value()))
-        # file_path = next_node.data(0, Qt.UserRole)[1]
-        # self.current_Nodes[index]=next_node
-        # if not file_path:
-        #     return
-        # self.show_images(file_path,index)
         # 获取当前图片的时间跨度
         time_span = self.steps_times[index]
         # 计数器递增
         self.counters[index] += 1
         # 只有当计数器达到时间跨度时，才移动到下一张图片
+        # 选择合适的step控件
+        if self.layers[index] == 0:
+            step = int(self.steps[0].value())
+        elif self.layers[index] == 1:
+            step = int(self.steps[1].value())
+        else:
+            step = int(self.steps[2].value())
+        time_span*=step
+        time_span/=self.abc
         if self.counters[index] >= time_span:
             # 重置计数器
             self.counters[index] = 0
 
             # 获取下一个节点
-            next_node = self.next(self.current_Nodes[index], int(self.step.value()))
+            next_node = self.next(self.current_Nodes[index], step)
             file_path = next_node.data(0, Qt.UserRole)[1]
             self.current_Nodes[index] = next_node
 
@@ -962,20 +982,20 @@ class MutiShowImage(ShowImage):
             self.show_images(file_path, index)
 
     def show_last_image(self, index):
-        # prev_node=self.prev(self.current_Nodes[index],int(self.step.value()))
-        # file_path = prev_node.data(0, Qt.UserRole)[1]
-        # self.current_Nodes[index]=prev_node
-        # if not file_path:
-        #     return
-        # self.show_images(file_path,index)
         # 获取当前图片的时间跨度
         time_span = self.steps_times[index]
-
         # 计数器递减
-        self.counters[index] -= 1
-
+        self.counters_back[index] -= 1
+        if self.layers[index] == 0:
+            step = int(self.steps[0].value())
+        elif self.layers[index] == 1:
+            step = int(self.steps[1].value())
+        else:
+            step = int(self.steps[2].value())
+        time_span*=step
+        time_span/=self.abc
         # 只有当计数器小于0时，才移动到上一张图片
-        if self.counters[index] < 0:
+        if self.counters_back[index] < -time_span:
             # 获取前一个节点
             prev_node = self.prev(self.current_Nodes[index], int(self.step.value()))
             file_path = prev_node.data(0, Qt.UserRole)[1]
@@ -985,7 +1005,7 @@ class MutiShowImage(ShowImage):
                 return
 
             # 重置计数器为前一张图片的时间跨度减1
-            self.counters[index] = self.steps_times[index] - 1
+            self.counters_back[index] = self.steps_times[index] - 1
 
             self.show_images(file_path, index)
         else:
