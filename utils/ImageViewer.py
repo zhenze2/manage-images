@@ -13,8 +13,10 @@ import cv2
 import numpy as np
 from multiprocessing import Process
 import xarray as xr
-OCEANS = ['salt','dens','temp']
+OCEANS = ['salt0m','salt50m','salt200m','salt1000m','dens0m','dens50m','dens200m','dens1000m','temp0m','temp50m','temp200m','temp1000m']
 DEPTHS = ['depth']
+suf1=['salt0m','salt50m','salt200m','salt1000m','temp0m','temp50m','temp200m','temp1000m','temp','salt']
+suf2=['dens0m','dens50m','dens200m','dens1000m','dens']
 import time
 class CircleDetectionThread(QThread):
     circle_detected = pyqtSignal(tuple)
@@ -192,7 +194,9 @@ class ShowImage(QMainWindow):
         #     self.time_pic=False
         # if  name.split('_')[0]== 'temp':
         #     self.time_pic=False
+        # print(name.split('_')[0],Config.no_lon_lat)
         if name.split('_')[0] in Config.no_lon_lat:
+            
             self.time_pic=True
         else:
             self.time_pic=False
@@ -422,13 +426,16 @@ class ShowImage(QMainWindow):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog  # 避免使用本地对话框以便更好地与PyQt5集成
         target_dir_path = QFileDialog.getExistingDirectory(self, "选择保存目录",options=options)
+        if not target_dir_path:
+            # print(target_dir_path)
+            return
         img_dir=os.path.dirname(self.image_path)
         img_name=os.path.basename(self.image_path)
         name=os.path.splitext(img_name)[0]
         name=name.replace('_A','')
         name=name.replace('_B','')
         suffix = name.split('_')[0]
-        img_dir=img_dir.replace('\\A','').replace('\\B','')
+        # img_dir=img_dir.replace('\\A','').replace('\\B','')
         img_dir=img_dir.replace('_A','').replace('_B','')
         ext='.nc'
         all_suffix = ['SIA','SIV','SIE']
@@ -449,14 +456,14 @@ class ShowImage(QMainWindow):
             end_name = year+ext
             source_file_path=os.path.join(img_dir.replace("images","data"),end_name)
             target_file_path = os.path.join(target_dir_path, end_name)
-        elif suffix in  ['temp',"salt"]:
+        elif suffix in  suf1:
             # end_name = "_".join(["salt-temp-mlt"]+name.split('_')[1:])+ext
             date="_".join(name.split('_')[1:])
             date=get_end_date(date)
             end_name="rare1.15.2_5dy_ocean_reg_"+date+ext
             target_file_path = os.path.join(target_dir_path, "_".join([suffix]+name.split('_')[1:])+ext)
             source_file_path=os.path.join(Config.extra_directory,end_name)
-        elif suffix == "dens":
+        elif suffix in suf2:
             date="_".join(name.split('_')[1:])
             date=get_end_date(date)
             end_name="density_rare1.15.2_5dy_ocean_reg_"+date+ext
@@ -470,6 +477,7 @@ class ShowImage(QMainWindow):
         else:
             source_file_path=os.path.join(img_dir.replace("images","data"),name+ext)
             target_file_path = os.path.join(target_dir_path, end_name)
+        # print(source_file_path,target_file_path)
         if os.path.exists(source_file_path):
             try:
                 # 复制文件到目标路径
@@ -824,7 +832,7 @@ class MutiShowImage(ShowImage):
         step_scroll.addWidget(self.step2)
         self.step3 = QSpinBox()
         self.step3.setRange(1, 100)
-        step_scroll.addWidget(self.step3)
+        # step_scroll.addWidget(self.step3)
         self.steps=[self.step,self.step2,self.step3]
 
         scroll_area = QScrollArea()
@@ -855,6 +863,7 @@ class MutiShowImage(ShowImage):
         gcd_ab = math.gcd(new_steps[0], 5*new_steps[1])
         gcd_abc = math.gcd(gcd_ab, 5*new_steps[2])
         self.abc=gcd_abc
+
     def show_images(self, image_paths, index=None):
         if not image_paths:
             return
@@ -886,6 +895,8 @@ class MutiShowImage(ShowImage):
                 self.show_raster_image(image_path, i)
             checkbox = QCheckBox(self.check_names[i])
             checkbox.setChecked(True)
+            if "depth" in self.check_names[i]:
+                continue
             self.checkbox_layout.addWidget(checkbox)
             self.image_checkboxes.append(checkbox)
 
@@ -960,6 +971,7 @@ class MutiShowImage(ShowImage):
         elif self.layers[index] == 1:
             step = int(self.steps[1].value())
         else:
+            return
             step = int(self.steps[2].value())
         time_span*=step
         time_span/=self.abc
@@ -991,6 +1003,7 @@ class MutiShowImage(ShowImage):
         elif self.layers[index] == 1:
             step = int(self.steps[1].value())
         else:
+            return
             step = int(self.steps[2].value())
         time_span*=step
         time_span/=self.abc

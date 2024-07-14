@@ -17,23 +17,15 @@ PATH_CIRCLES=r"conf\circels.pkl"
 '''
 pyinstaller --onefile --noconsole index_search\\Index_search.py
 '''
-
-'''
-Nuitka 打包
-
-python -m nuitka --standalone --mingw64 --oindex_file_path
-    --remove-output ^
-    --disable-console ^
-    --plugin-enable=pyqt5 ^
-    --output-dir=dist ^
-    --output-filename=a.exe ^
-    Index_search_Qt.py
-'''
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         
         # 获取当前文件所在目录
+        # if getattr(sys, 'frozen', False):  # 如果程序是冻结状态，即打包为exe
+        #     self.current_dir = os.path.dirname(sys.executable)
+        # else:
+        #     self.current_dir = os.path.dirname(os.path.abspath(__file__))
         self.current_dir=os.path.dirname(sys.argv[0])
         Config.current_dir = self.current_dir
         Config.index_file_path = os.path.join(self.current_dir,PATH_INDEX)
@@ -457,11 +449,22 @@ class MainWindow(QMainWindow):
         image_paths = [path for i, path in enumerate(self.paths) if self.checkboxes[i].isChecked() and path is not None]
         # 获取类别名称
         c_name = [name for category in dicts for name in category]
+        cates=[]
+        itemss=[]
+        for i in range(len(c_name)):
+            for path in image_paths:
+                if c_name[i] in path:
+                    cates.append(c_name[i])
+                    itemss.append(items[i])
+                    break
+        # print(cates)
+        # print(image_paths)
+        # print(len(items))
         # 如果有图片路径，显示多张图片
         if image_paths:
             multi_image_display = MutiShowImage(tree=self.tree, time_entry=self.time_entry, image_paths=image_paths)
-            multi_image_display.check_names = c_name
-            multi_image_display.current_Nodes = items
+            multi_image_display.check_names = cates
+            multi_image_display.current_Nodes = itemss
             multi_image_display.show_images(image_paths)
 
     def getInputType(self):
