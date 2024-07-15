@@ -1,10 +1,9 @@
 import shutil
 import math
-from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox,QStatusBar,QApplication
-from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF,QThread, QRunnable, QThreadPool, pyqtSlot, QObject, pyqtSignal
+from PyQt5.QtWidgets import  QMainWindow,  QVBoxLayout, QWidget, QPushButton, QMessageBox,   QHBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QCheckBox,QAction,QFileDialog,QDialog, QDialogButtonBox, QFormLayout,QDoubleSpinBox,QLabel,QGridLayout,QScrollArea,QSpinBox,QStatusBar,QApplication,QSplitter,QSizePolicy
+from PyQt5.QtCore import Qt, QTimer, QEvent, QRectF,QThread,  QThreadPool, pyqtSignal
 from PyQt5.QtGui import QPixmap,QKeyEvent
 from PyQt5.QtSvg import QSvgRenderer, QGraphicsSvgItem
-from concurrent.futures import ProcessPoolExecutor
 import netCDF4 as nc
 import pandas as pd
 import os
@@ -13,7 +12,15 @@ import cv2
 import numpy as np
 from multiprocessing import Process
 import xarray as xr
-OCEANS = ['salt0m','salt50m','salt200m','salt1000m','dens0m','dens50m','dens200m','dens1000m','temp0m','temp50m','temp200m','temp1000m']
+OCEANS = ['salt','temp','dens','salt0m','salt50m','salt200m','salt1000m','dens0m','dens50m','dens200m','dens1000m','temp0m','temp50m','temp200m','temp1000m']
+ROWS=[
+            ['SIC','SIT-PIOMAS','SID'],
+            ["temp","salt","dens"],
+            ["temp0m", "salt0m", "dens0m"],
+            ["temp50m", "salt50m", "dens50m"],
+            ["temp200m", "salt200m", "dens200m"],
+            ["temp1000m", "salt1000m", "dens1000m"]
+        ]
 DEPTHS = ['depth']
 suf1=['salt0m','salt50m','salt200m','salt1000m','temp0m','temp50m','temp200m','temp1000m','temp','salt']
 suf2=['dens0m','dens50m','dens200m','dens1000m','dens']
@@ -471,9 +478,9 @@ class ShowImage(QMainWindow):
             source_file_path=os.path.join(Config.extra_directory,end_name)
         elif suffix == "depth":
             end_name="GEBCO_2023_sub_ice_topo.nc"
-            target_dir_path = os.path.join(target_dir_path,"depth"+ext)
+            target_file_path = os.path.join(target_dir_path,"depth"+ext)
             source_file_path=os.path.join(Config.extra_directory,end_name)
-            # print(source_file_path,target_dir_path)
+            # print(source_file_path,target_file_path)
         else:
             source_file_path=os.path.join(img_dir.replace("images","data"),name+ext)
             target_file_path = os.path.join(target_dir_path, end_name)
@@ -481,13 +488,16 @@ class ShowImage(QMainWindow):
         if os.path.exists(source_file_path):
             try:
                 # 复制文件到目标路径
+                # if suffix=="depth":
+                #     shutil.copyfile(source_file_path, target_file_path)
+                # else:
+                #     shutil.copy(source_file_path, target_file_path)
                 shutil.copy(source_file_path, target_file_path)
-
                 QMessageBox.information(self, "","保存成功")
                 # copy_with_progress(source_file_path, target_file_path)
             except Exception as e:
                 # 发出错误消息
-                QMessageBox.critical(self, "错误", "保存失败")
+                QMessageBox.critical(self, "错误", f"保存失败{e}")
         else:
             # 显示错误消息
             QMessageBox.critical(self, "错误", f"{source_file_path}源文件不存在")
@@ -605,6 +615,11 @@ class ShowImage(QMainWindow):
             self.resize_svg()
 
     def closeEvent(self, event):
+        # 如果在自动播放，停止自动播放
+        if self.playing:
+            self.playing = False
+            if self.timer_id:
+                self.killTimer(self.timer_id)
         ShowImage.windows.remove(self)  # 从列表中移除当前窗口
         event.accept()
     @classmethod
@@ -729,17 +744,17 @@ class MutiShowImage(ShowImage):
         self.setGeometry(100, 100, 1200, 800)
         self.setMinimumSize(800, 600)
         main_layout = QVBoxLayout()
+        button_layout = self.create_button_layout()
         grid_layout = self.create_grid_layout()
         main_layout.addLayout(grid_layout)
         main_layout.setAlignment(Qt.AlignCenter)
 
-        button_layout = self.create_button_layout()
         main_layout.addLayout(button_layout)
-        main_layout.setContentsMargins(0, 0, 0, 0)
 
         step_scroll_widget = self.create_step_scroll_widget()
         main_layout.addWidget(step_scroll_widget)
 
+        main_layout.setContentsMargins(0, 0, 0, 0)
         central_widget = QWidget()
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
@@ -755,16 +770,72 @@ class MutiShowImage(ShowImage):
         button_layout.setContentsMargins(0, 0, 0, 0)  # 使按钮紧靠窗口底部边缘
         self.windows.append(self)
 
+    # def create_grid_layout(self):
+    #     vbox_layout = QVBoxLayout()
+    #     hbox_layouts = [QHBoxLayout(), QHBoxLayout(), QHBoxLayout()]
+    #     cols = [0, 0, 0]
+    #     self.steps_times=[]
+    #     self.counters = []
+    #     self.counters_back = []
+    #     self.layers=[]
+    #     oceans = OCEANS
+    #     depths = DEPTHS
+
+    #     for i, path in enumerate(self.image_paths):
+    #         graphics_view = QGraphicsView()
+    #         graphics_scene = QGraphicsScene()
+    #         graphics_view.viewport().installEventFilter(self)
+    #         graphics_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    #         graphics_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    #         graphics_view.setFrameStyle(0)
+    #         self.graphics_views.append(graphics_view)
+    #         self.graphics_scenes.append(graphics_scene)
+    #         suffix = os.path.basename(path).split('_')[0]
+    #         if suffix in oceans:
+    #             self.steps_times.append(5)
+    #             self.counters.append(0)
+    #             self.counters_back.append(0)
+    #             self.layers.append(1)
+    #             row = 1
+    #         elif suffix in depths:
+    #             self.steps_times.append(5)
+    #             self.counters.append(0)
+    #             self.counters_back.append(0)
+    #             self.layers.append(2)
+    #             row = 2
+    #         else:
+    #             self.steps_times.append(1)
+    #             self.counters.append(0)
+    #             self.counters_back.append(0)
+    #             self.layers.append(0)
+    #             row = 0
+            
+    #         hbox_layouts[row].addWidget(graphics_view)
+    #         cols[row] += 1
+
+    #     for hbox_layout in hbox_layouts:
+    #         if hbox_layout.count() > 0:
+    #             vbox_layout.addLayout(hbox_layout)
+
+    #     vbox_layout.setContentsMargins(0, 0, 0, 0)
+    #     return vbox_layout
+
     def create_grid_layout(self):
-        vbox_layout = QVBoxLayout()
-        hbox_layouts = [QHBoxLayout(), QHBoxLayout(), QHBoxLayout()]
-        cols = [0, 0, 0]
+        vbox_layout_left = QVBoxLayout()  # 左边列的布局
+        # hbox_layouts = [QHBoxLayout() for _ in range(5)]  # 五行的布局
+        hbox_layout_right = QHBoxLayout()  # 右边列的布局
+        splitter = QSplitter(Qt.Horizontal)  # 创建一个水平分割器
         self.steps_times=[]
         self.counters = []
         self.counters_back = []
         self.layers=[]
         oceans = OCEANS
         depths = DEPTHS
+        # 定义每层的结构
+        layer_structure = ROWS
+
+        # 创建一个字典来存储每个预期位置的图像
+        placeholders = {name: None for layer in layer_structure for name in layer}
 
         for i, path in enumerate(self.image_paths):
             graphics_view = QGraphicsView()
@@ -776,7 +847,7 @@ class MutiShowImage(ShowImage):
             self.graphics_views.append(graphics_view)
             self.graphics_scenes.append(graphics_scene)
             suffix = os.path.basename(path).split('_')[0]
-            
+            # graphics_view.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
             if suffix in oceans:
                 self.steps_times.append(5)
                 self.counters.append(0)
@@ -788,6 +859,7 @@ class MutiShowImage(ShowImage):
                 self.counters.append(0)
                 self.counters_back.append(0)
                 self.layers.append(2)
+                hbox_layout_right.addWidget(graphics_view)
                 row = 2
             else:
                 self.steps_times.append(1)
@@ -795,16 +867,36 @@ class MutiShowImage(ShowImage):
                 self.counters_back.append(0)
                 self.layers.append(0)
                 row = 0
-            
-            hbox_layouts[row].addWidget(graphics_view)
-            cols[row] += 1
+            if suffix in placeholders:
+                placeholders[suffix] = graphics_view
 
-        for hbox_layout in hbox_layouts:
-            if hbox_layout.count() > 0:
-                vbox_layout.addLayout(hbox_layout)
+        # 根据层次结构创建布局
+        for row_index, layer in enumerate(layer_structure):
+            hbox_layout = QHBoxLayout()
+            for name in layer:
+                if placeholders[name]:
+                    hbox_layout.addWidget(placeholders[name])
+                    hbox_layout.setContentsMargins(0, 0, 0, 0)
+            vbox_layout_left.addLayout(hbox_layout)
+            vbox_layout_left.setContentsMargins(0, 0, 0, 0)
+        # 创建两个QWidget，分别设置为左右两列的布局，然后添加到QSplitter中
+        widget_left = QWidget()
+        widget_left.setLayout(vbox_layout_left)
+        splitter.addWidget(widget_left)
 
-        vbox_layout.setContentsMargins(0, 0, 0, 0)
-        return vbox_layout
+        widget_right = QWidget()
+        widget_right.setLayout(hbox_layout_right)
+        splitter.addWidget(widget_right)
+        splitter.setContentsMargins(0, 0, 0, 0)
+        # 创建一个新的布局，把QSplitter添加到这个布局中
+        all_layouts = QHBoxLayout()
+        all_layouts.addWidget(splitter)
+        # all_layouts = QHBoxLayout()
+        # all_layouts.addLayout(vbox_layout_left)
+        # all_layouts.addLayout(hbox_layout_right)
+        all_layouts.setContentsMargins(0, 0, 0, 0)
+        return all_layouts
+
 
     def create_button_layout(self):
         button_layout = QHBoxLayout()
@@ -1229,8 +1321,15 @@ class MutiShowImage(ShowImage):
         else:
             self.zoom_factor = 1.1
 
+    def closeEvent(self, event):
+        # 停止所有计时器
+        for timer in self.timers:
+            if timer:
+                timer.stop()
 
-
+        # 从列表中移除当前窗口
+        ShowImage.windows.remove(self)
+        event.accept()
 
 
 if __name__ == "__main__":

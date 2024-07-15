@@ -7,12 +7,15 @@ DEFAULT_CONFIG = {
     "image_formats": [".jpg",".png",".svg",".jpeg",".bmp",".tiff"],
     "default_path": "images",
     "deault_visual_path": "visual_images",
-    "elements_translation": {"SIC":'海冰密集度',"SIT":'海冰厚度',"SIE":'海冰范围',"SIV":'海冰体积','SID':'海冰流速',"SIA": "海冰面积","salt0m": "海洋盐度0m","salt50m":"海洋盐度50m","temp0m": "海洋温度和流速0m","temp50m":"海洋温度和流速50m","temp200m":"海洋温度和流速200m","temp1000m":"海洋温度和流速1000m","dens0m": "海洋密度0m","dens50m":"海洋密度50m","dens200m":"海洋密度200m","dens1000m":"海洋密度1000m","depth":"海洋深度","salt":"海洋盐度","temp":"海洋温度和流速","dens":"海洋密度"},
+    "elements_translation": {"SIC":'海冰密集度',"SIT":'海冰厚度',"SIE":'海冰范围',"SIV":'海冰体积','SID':'海冰流速',"SIA": "海冰面积","depth":"海洋深度","salt":"海洋盐度","temp":"海洋温度","dens":"海洋密度和流速"},
     "No_lon_lat":["salt","dens","salt",'salt0m','salt50m','salt200m','salt1000m','dens0m','dens50m','dens200m','dens1000m','temp0m','temp50m','temp200m','temp1000m',"SIA","SIE","SIV"],
     "extra_directory":"G:\\data\\muti\\all",
     "Name_rule":'要素名称_年份_月份_日期',
     "Current_DIR":None,
 }
+'''
+"salt0m": "海洋盐度0m","salt50m":"海洋盐度50m","temp0m": "海洋温度和流速0m","temp50m":"海洋温度和流速50m","temp200m":"海洋温度和流速200m","temp1000m":"海洋温度和流速1000m","dens0m": "海洋密度0m","dens50m":"海洋密度50m","dens200m":"海洋密度200m","dens1000m":"海洋密度1000m",
+'''
 
 class ConfigManager:
     def __init__(self, config_file):

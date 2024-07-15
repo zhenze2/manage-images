@@ -438,24 +438,48 @@ class MainWindow(QMainWindow):
         dicts, self.paths, items = dicts + a1, self.paths + a2, items + a3
         a1, a2, a3 = muti_search(self.entry_path, "0000_01_01", self.data, elements, self.tree, '')
         dicts, self.paths, items = dicts + a1, self.paths + a2, items + a3
+        # print(dicts)
         # 如果没有找到结果，返回
         if dicts is None or (isinstance(dicts, list) and all(isinstance(sublist, list) and not sublist for sublist in dicts)):
             return
+        no_SIT=["SIT-cs2smos","SIT-app-x"]
+        # print(dicts)
+        for ls in dicts:
+            if no_SIT[0] in ls:
+                ls.remove(no_SIT[0])
+            if no_SIT[1] in ls:
+                ls.remove(no_SIT[1])
+        for path in self.paths:
+            if path is not None:
+                if no_SIT[0] in path:
+                    self.paths.remove(path)
+                if no_SIT[1] in path:
+                    self.paths.remove(path)
+        for item in items:
+            if no_SIT[0] in item.data(0, Qt.UserRole)[1]:
+                items.remove(item)
+            if no_SIT[1] in item.data(0, Qt.UserRole)[1]:
+                items.remove(item)
+        # print(dicts)
         # 如果输入的日期变化，更新复选框
         if self.last_input != date:
             self.update_checkboxes(dicts)
         self.last_input = date
         # 获取选中的图片路径
         image_paths = [path for i, path in enumerate(self.paths) if self.checkboxes[i].isChecked() and path is not None]
+
         # 获取类别名称
         c_name = [name for category in dicts for name in category]
         cates=[]
         itemss=[]
         for i in range(len(c_name)):
+            # if c_name[i] in ["SIT-cs2smos","SIT-app-x"]:
+                # continue
             for path in image_paths:
-                if c_name[i] in path:
+                if c_name[i] in path: 
                     cates.append(c_name[i])
                     itemss.append(items[i])
+                    # print(c_name[i],items[i].data(0, Qt.UserRole)[1])
                     break
         # print(cates)
         # print(image_paths)
